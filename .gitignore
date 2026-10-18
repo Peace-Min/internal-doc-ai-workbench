@@ -1,0 +1,18 @@
+# Local secrets and internal artifacts
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+secrets/
+private/
+data/
+models/
+logs/
+node_modules/
+__pycache__/
+.venv/
+dist/
+build/
