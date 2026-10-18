@@ -2,7 +2,7 @@
 
 폐쇄망의 클라우디움 문서를 열어 편집하고, 사내 LLM으로 내용을 질의·요약·보완하는 문서 워크벤치.
 
-현재 상태: **PC 설치형 플러그인 PoC 0.1.0**. 로컬 서비스·플러그인 코드·모의 QA를 구현했다. 실제 ONLYOFFICE Desktop Editors 통합과 사내 연결은 검증 전이다.
+현재 상태: **PC 설치형 플러그인 PoC 0.2.0**. 실제 ONLYOFFICE Desktop Editors 10.0.0에서 단순 PPTX 읽기·수정안 적용·undo/redo·저장·재열기를 확인했다. 사내 LLM·클라우디움·Marker 연결과 완전한 폐쇄망 배포는 검증 전이다.
 
 ## 목표
 
@@ -26,7 +26,7 @@
 
 ## 첫 개발 범위
 
-사용자 선택에 따라 **PC 설치형을 우선**한다. ONLYOFFICE Desktop Editors 10.0.0의 PPTX 플러그인에서 단일 문단·단일 run의 텍스트 상자를 읽고, 로컬 서비스를 거쳐 AI 수정안을 확인·적용하는 코드를 작성했다. 현재 PC에 편집기가 없어 실제 설치·저장·실행 취소는 미검증이다.
+사용자 선택에 따라 **PC 설치형을 우선**한다. ONLYOFFICE Desktop Editors 10.0.0의 PPTX 플러그인에서 단일 문단·내용이 있는 run 한 개의 텍스트 상자를 읽고, 로컬 서비스를 거쳐 AI 수정안을 확인·적용한다. 빈 run은 보존한다. 실제 엔진에서 합성 PPTX와 mock AI로 기본 흐름을 검증했다. 실제 모델 호출과 복잡한 문서 지원은 아직 아니다.
 
 ## 로컬 실행
 
@@ -43,7 +43,7 @@ npm start
 npm run package
 ```
 
-`dist/`에 설치용 `.plugin`, 소스 ZIP, 체크섬을 생성한다. 편집기와 Node 런타임은 포함되지 않는다. [PC 설치와 실행](docs/wiki/desktop-setup.md), [QA 결과](docs/qa/2026-10-18-poc.md)를 참고한다.
+`dist/`에 설치용 `.plugin`, 소스 ZIP, 체크섬을 생성한다. 편집기와 Node 런타임은 포함되지 않는다. [PC 설치와 실행](docs/wiki/desktop-setup.md), [실제 Desktop QA 결과](docs/qa/2026-10-18-desktop.md), [초기 모의 QA](docs/qa/2026-10-18-poc.md)를 참고한다.
 
 ## 공개 저장소 원칙
 

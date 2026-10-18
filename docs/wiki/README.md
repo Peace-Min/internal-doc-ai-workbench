@@ -4,10 +4,11 @@
 
 ## 작성 상태
 
-로컬 서비스와 모의 UI를 실행하는 절차를 [PC 설치형 PoC 설치·실행](desktop-setup.md)에 기록했다. 실제 Desktop Editors 설치와 사내 연동은 미검증이라고 문서 내 구분했다.
+로컬 서비스·모의 UI 실행과 실제 Windows Desktop 개발 설치·단순 PPTX QA 절차를 [PC 설치형 PoC 설치·실행](desktop-setup.md)에 기록했다. 실제 사내 연동과 전체 폐쇄망 검증은 구분해 남겨 두었다.
 
 - [고정 SDK 기술 조사](../06-desktop-api-research.md)
 - [PoC QA 결과](../qa/2026-10-18-poc.md)
+- [실제 Desktop QA 결과](../qa/2026-10-18-desktop.md)
 
 ## 향후 문서
 

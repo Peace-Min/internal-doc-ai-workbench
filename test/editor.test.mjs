@@ -4,11 +4,11 @@ import vm from 'node:vm';
 import { readFile } from 'node:fs/promises';
 const source = await readFile(new URL('../plugin/editor-command.js', import.meta.url), 'utf8');
 function fixture() {
-  const state = { text: '원래 문장', second: '다른 개체', selected: 'one', deleted: false, runs: 1, paragraphs: 1, bold: true, writes: 0 };
+  const state = { text: '원래 문장', second: '다른 개체', selected: 'one', deleted: false, runs: 1, emptyRuns: 0, paragraphs: 1, bold: true, writes: 0 };
   function shape(id) {
     const key = id === 'one' ? 'text' : 'second';
     const run = { GetClassType:()=> 'run', GetText:()=>state[key], ClearContent:()=>{state[key]='';state.writes++;return true;}, AddText:text=>{state[key]+=text;return true;} };
-    const paragraph = { GetElementsCount:()=>state.runs, GetElement:()=>run };
+    const paragraph = { GetElementsCount:()=>state.runs+state.emptyRuns, GetElement:(i)=>i<state.emptyRuns?{GetClassType:()=> 'run',GetText:()=>''}:run };
     return { GetInternalId:()=>id, GetClassType:()=> 'shape', GetContent:()=>({GetAllParagraphs:()=>Array(state.paragraphs).fill(paragraph)}) };
   }
   const context = vm.createContext({ Asc: { scope: {} }, Api: {
@@ -37,6 +37,13 @@ test('multi-run/multi-paragraph content fails closed', () => {
     const {state,invoke}=fixture(); state[property]=2;
     assert.ok(invoke({action:'capture'}).error); assert.equal(state.writes,0);
   }
+});
+test('empty formatting runs do not prevent editing the single nonempty run', () => {
+  const {state,invoke}=fixture(); state.emptyRuns=2;
+  const target=invoke({action:'capture'});
+  assert.equal(target.text,'원래 문장');
+  assert.equal(invoke({action:'apply',target,proposedText:'수정 문장'}).applied,true);
+  assert.equal(state.text,'수정 문장');
 });
 test('invalid proposal cannot clear the original', () => {
   for(const text of ['', 'two\nlines', 'x'.repeat(12001), null]) {

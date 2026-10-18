@@ -30,11 +30,14 @@ test('reject missing auth, foreign origin and forged host', async () => {
     assert.equal(status, 403);
   });
 });
-test('desktop null origin preflight and authenticated requests', async () => {
+test('desktop file:// and null origin preflight and authenticated requests', async () => {
   await withServer({}, async (request, url) => {
-    const preflight = await fetch(url + '/api/propose', { method: 'OPTIONS', headers: { Origin: 'null', 'Access-Control-Request-Headers': 'authorization,content-type' } });
-    assert.equal(preflight.status, 204); assert.equal(preflight.headers.get('access-control-allow-origin'), 'null');
-    assert.equal((await request('/api/propose', input, { Origin: 'null' })).status, 200);
+    for (const origin of ['file://', 'null']) {
+      const preflight = await fetch(url + '/api/propose', { method: 'OPTIONS', headers: { Origin: origin, 'Access-Control-Request-Headers': 'authorization,content-type' } });
+      assert.equal(preflight.status, 204); assert.equal(preflight.headers.get('access-control-allow-origin'), origin);
+      assert.equal((await request('/api/propose', input, { Origin: origin })).status, 200);
+      assert.equal((await request('/api/propose', input, { Origin: origin, Authorization: '' })).status, 401);
+    }
   });
 });
 test('reject malformed, oversized and unsupported commands', async () => {

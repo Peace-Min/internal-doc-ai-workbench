@@ -29,7 +29,8 @@ export function createWorkbenchServer(options = {}) {
     upstream = new URL(options.llmUrl);
     if (!['http:', 'https:'].includes(upstream.protocol) || upstream.username || upstream.password || upstream.search || upstream.hash || !options.model) throw new Error('내부 LLM URL과 모델 설정을 확인하세요.');
   }
-  const origins = new Set(options.origins || ['null']);
+  // Desktop Editors 10.0.0 on Windows sends Origin: file:// for local plugins.
+  const origins = new Set(options.origins || ['null', 'file://']);
   const expectedToken = Buffer.from(`Bearer ${token}`);
   const server = http.createServer(async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
@@ -48,7 +49,7 @@ export function createWorkbenchServer(options = {}) {
     if (pathname.startsWith('/api/')) {
       const supplied = Buffer.from(req.headers.authorization || '');
       if (supplied.length !== expectedToken.length || !timingSafeEqual(supplied, expectedToken)) return send(401, { error: '연결 코드를 확인하세요.' });
-      if (req.method === 'GET' && pathname === '/api/health') return send(200, { mode, version: '0.1.0' });
+      if (req.method === 'GET' && pathname === '/api/health') return send(200, { mode, version: '0.2.0' });
       if (req.method !== 'POST' || pathname !== '/api/propose') return send(404, { error: '지원하지 않는 경로입니다.' });
       if (!/^application\/json(?:;|$)/i.test(req.headers['content-type'] || '')) return send(415, { error: 'JSON 요청만 지원합니다.' });
       try {
@@ -91,7 +92,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const port = Number(process.env.WB_PORT || 4318);
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('WB_PORT를 확인하세요.');
   const token = process.env.WB_TOKEN || randomBytes(24).toString('hex');
-  const server = createWorkbenchServer({ token, mode: process.env.WB_MODE, llmUrl: process.env.WB_LLM_URL, model: process.env.WB_LLM_MODEL, llmKey: process.env.WB_LLM_KEY, origins: (process.env.WB_PLUGIN_ORIGINS || 'null').split(',').map(s => s.trim()) });
+  const server = createWorkbenchServer({ token, mode: process.env.WB_MODE, llmUrl: process.env.WB_LLM_URL, model: process.env.WB_LLM_MODEL, llmKey: process.env.WB_LLM_KEY, origins: (process.env.WB_PLUGIN_ORIGINS || 'null,file://').split(',').map(s => s.trim()) });
   await mkdir(path.join(root, 'private'), { recursive: true });
   await writeFile(path.join(root, 'private/runtime.json'), JSON.stringify({ url: `http://127.0.0.1:${port}`, token }, null, 2), { mode: 0o600 });
   server.listen(port, '127.0.0.1', () => console.log(`Local bridge: http://127.0.0.1:${port}/?demo=1\nPairing code: private/runtime.json\nMode: ${process.env.WB_MODE || 'mock'}`));
