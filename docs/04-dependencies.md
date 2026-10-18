@@ -5,6 +5,8 @@
 | 후보 | 역할 | 라이선스 | 판단 |
 | --- | --- | --- | --- |
 | ONLYOFFICE Docs Community | PPTX/PDF 주 편집기 | AGPL-3.0 | 우선 PoC 후보. Community 플러그인 사용, 유료 Automation API 의존 금지 |
+| ONLYOFFICE Desktop Editors 10.0.0 | PC 설치형 Office 편집기 | AGPL-3.0, 파일별 추가 고지 확인 | 사용자 선택에 따라 현재 PoC 대상. 실행 바이너리는 이 저장소에 포함하지 않음 |
+| ONLYOFFICE plugins.js | 로컬 플러그인 부트스트랩 | AGPL-3.0 및 원본 헤더 추가 고지 | 고정 커밋 파일을 vendor로 포함. SHA-256과 원문 고지 보존 |
 | Collabora Online/CODE | Office 웹 편집기 대안 | 주요 소스 MPL-2.0, 구성요소별 별도 | ONLYOFFICE 대체 후보. WOPI 연동 및 배포 형태 조사 필요 |
 | PDF.js | PDF 렌더링·뷰어 | Apache-2.0 | 자체 PDF UI가 필요할 때 검토 |
 | pdf-lib | PDF 페이지/추가 콘텐츠/양식 조작 | MIT | 기존 일반 본문 텍스트 수정 API 없음 |
@@ -22,11 +24,12 @@
 - AGPL: 배포 및 수정본의 원격 네트워크 제공 시 대응 소스 제공 조건 확인. 결합한 코드의 범위는 구조에 따라 판단.
 - Marker MODEL_LICENSE는 회사의 전년도 매출 또는 누적 투자금 500만 달러 초과 시 개인/연구 예외 외 사용 제한과 경쟁 제품·서비스 제한을 명시한다. Attribution 및 Output 관련 Share-a-Like 조항도 있으므로 실제 모델별 적용 조건을 검토한다.
 - 인터넷 차단 가능성과 라이선스 적합성은 별개다. 사내 LLM 연결이 Marker 인식 모델 조건을 대체하지 않는다.
-- 프로젝트 자체 라이선스는 미정이다. 구현·배포 전에 선정한다.
+- 프로젝트 자체 코드는 0.1.0부터 AGPL-3.0-only로 공개한다. 포함 SDK의 추가 고지는 plugin/THIRD_PARTY_NOTICES.md와 원본 헤더를 유지한다.
 
 ## 공식 근거
 
 - [ONLYOFFICE 소스·에디션](https://github.com/ONLYOFFICE/DocumentServer)
+- [Desktop Editors 10.0.0 소스](https://github.com/ONLYOFFICE/DesktopEditors/tree/v10.0.0)
 - [ONLYOFFICE 플러그인](https://api.onlyoffice.com/docs/plugins/get-started/overview)
 - [로컬 AI 연결](https://api.onlyoffice.com/docs/ai/more-information/faq)
 - [플러그인 수동 설치](https://helpcenter.onlyoffice.com/docs/installation/docs-add-plugin.aspx)

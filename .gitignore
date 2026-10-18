@@ -16,3 +16,5 @@ __pycache__/
 .venv/
 dist/
 build/
+.playwright-cli/
+output/

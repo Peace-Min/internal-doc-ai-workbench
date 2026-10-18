@@ -1,0 +1,11 @@
+{
+  "poc": "0.1.0",
+  "nodeTested": "22.14.0",
+  "npmTested": "10.9.2",
+  "desktopEditorsTarget": "v10.0.0",
+  "desktopSdkjsCommit": "72b0421c0bbf9d01eed9cf14834ae47eb2df1b50",
+  "pluginBootstrapCommit": "f3263c055c25875874004463b46c2e6a7000a9fd",
+  "pluginBootstrapSha256": "1bc0bd71eebcb477ceaaee3ab00ed1a10ce7eae117ec68ae8024645c435f524e",
+  "marker": "not-integrated",
+  "runtimeNpmDependencies": []
+}

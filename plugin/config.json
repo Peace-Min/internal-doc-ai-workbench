@@ -1,0 +1,21 @@
+{
+  "name": "Internal AI Workbench",
+  "guid": "asc.{A5BA9AF1-7BCE-4B75-86F7-C28D4E922B1B}",
+  "version": "0.1.0",
+  "minVersion": "10.0.0",
+  "baseUrl": "",
+  "variations": [{
+    "description": "사내 AI로 텍스트 보완",
+    "url": "index.html",
+    "icons": ["icon.svg", "icon.svg"],
+    "isViewer": false,
+    "EditorsSupport": ["slide"],
+    "isVisual": true,
+    "isModal": false,
+    "isInsideMode": true,
+    "type": "panelRight",
+    "initDataType": "none",
+    "initData": "",
+    "buttons": []
+  }]
+}

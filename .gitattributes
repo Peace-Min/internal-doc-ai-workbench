@@ -1,0 +1,6 @@
+* text=auto eol=lf
+*.png binary
+*.zip binary
+*.plugin binary
+# Preserve upstream bytes and the recorded SHA-256 exactly.
+plugin/vendor/plugins.js -text
