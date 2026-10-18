@@ -49,6 +49,8 @@ Copy-Item -LiteralPath './LICENSE' -Destination (Join-Path $pluginPath 'LICENSE'
 
 ## 4. 사내 모델 연결 (실환경 미검증)
 
+현재 제공된 Claude 설정의 `ANTHROPIC_BASE_URL`·`ANTHROPIC_AUTH_TOKEN` 방식은 [사내 LLM 게이트웨이 연결](internal-llm.md)을 따른다. 아래는 기존 OpenAI 호환 경로의 별도 설정 예시다. 두 프로토콜을 혼동하지 않는다.
+
 `.env.example`을 `.env`로 복사하고 로컬에서만 다음 값을 지정한다.
 
 ```dotenv

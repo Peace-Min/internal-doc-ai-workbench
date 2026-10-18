@@ -18,25 +18,27 @@ README.md → 이 문서 → docs/05-decisions.md → docs/02-development.md 순
 
 - QA 운영 제약: **사용자 PC 직접 제어 금지**. 사용자 작업을 방해하지 않도록 백그라운드 코드/API·헤드리스 브라우저 QA를 기본으로 한다. 실제 Desktop UI 검증은 별도 VM/전용 테스트 PC에서만 한다.
 - 사용자 확정: **PC 설치형 데스크톱 앱 우선**. 웹 서버형 우선 가정은 철회.
+- 완료 작업 단위마다 검증·문서 갱신 후 Git 커밋·푸시를 진행하도록 사용자 위임. 매번 승인 요청하지 않는다.
 - 완료: 실제 Desktop Editors 10.0.0 Windows x64 실행, 개발 경로 플러그인 설치·패널 로드, localhost mock 연결, 단순 PPTX 읽기·적용·undo/redo·저장·재열기. 해당 합성 슬라이드의 글자·도형 서식 XML 비교 통과. 자동 테스트 12개 통과.
 - 수정: 실제 Origin `file://` 허용, 빈 run을 제외한 단일 nonempty run 처리. 여러 nonempty run·다중 문단 수정은 계속 제한.
 - 미완료: 실제 클라우디움·사내 LLM·Marker, 복잡한 문서·PDF, 실제 편집기 선택변경/충돌 추가 QA, `.plugin` UI 설치, 완전 차단 환경 신규 설치, 통합 데스크톱 설치 프로그램.
 - 실제 사내 환경에 접근하거나 API 응답을 확인한 적은 없다.
 - 실행/설치: docs/wiki/desktop-setup.md. 최신 QA: docs/qa/2026-10-18-desktop.md. 초기 모의 QA는 이력으로 유지.
 - 프로젝트 코드는 AGPL-3.0-only. vendor/plugins.js의 원본 헤더와 추가 고지는 유지.
+- 최신 0.3.0: Anthropic Messages 호환 어댑터와 로컬 Claude 설정 파일 읽기 구현. 자동 테스트 26개 통과. 사용자 지정 config의 비노출 dry-run 성공. 실제 사내 게이트웨이 요청은 미실행. 최신 절차: docs/wiki/internal-llm.md, QA: docs/qa/2026-10-18-anthropic.md.
 
 ## 다음 작업
 
 1. `npm test` 후 `npm run package`로 소스 상태와 배포물을 재현한다. 외부 npm 의존성이 없다.
 2. 별도 VM/전용 테스트 PC가 준비된 뒤 실제 엔진에서 선택변경/원문 충돌/삭제 시나리오와 `.plugin` UI 설치를 추가 검증한다. 사용자 PC에서는 직접 UI 제어를 하지 않는다. 기본 읽기→모의 AI→적용→undo/redo→저장·재열기는 완료했으므로 반복부터 시작하지 않는다.
-3. 사내 LLM의 API 규격과 클라우디움 문서 열기/저장 API·SDK 제공 여부를 확인한다. 사용자에게 내부 주소·키 대신 비식별 규격을 질문해 둔 상태다. API 명세는 아직 없다.
-4. 규격이 확인되면 `.env`와 내부 어댑터로 실제 모델·문서 저장소에 연결한다. URL·키는 커밋 금지.
+3. 사내 LLM은 Anthropic Messages 호환 변수를 사용하는 구성으로 확인하여 어댑터 구현과 모의 HTTP QA 완료. 다음은 폐쇄망에서 합성 문장으로 실제 게이트웨이 응답 확인. config dry-run을 live 연결 완료로 간주하지 않는다.
+4. 클라우디움 문서 열기/저장 API·SDK 제공 여부는 아직 미확인. 규격 확보 후 저장소 어댑터를 구현한다. URL·키는 커밋 금지.
 5. PDF/표/그룹/다중 run/선택 문자열 편집과 Marker는 다음 단계다. 현재 플러그인은 PPTX 개체 전체·단일 문단·단일 nonempty run만 지원하도록 제한한다.
 6. 통합 런처·설치 패키지와 전체 폐쇄망 반입 패키지를 만든다.
 
 ## 사내 모델 규격 확인 (2026-10-18)
 
-사용자가 지정한 로컬 VS Code 설정 파일의 구조만 확인했다. `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, 모델별 `ANTHROPIC_DEFAULT_*_MODEL` 환경 변수 설정이 있어 Anthropic Messages 호환 연결을 우선 지원할 근거가 있다. 실제 내부 주소·토큰·모델 식별자는 이 저장소에 복사하지 않았다. vLLM 또는 앞단 게이트웨이의 실제 구현/버전과 엔드포인트 동작은 아직 확인하지 않았다. 기존 OpenAI 호환 어댑터만으로 연결된다고 가정하지 말고 Anthropic 호환 어댑터를 추가해 모의 HTTP 테스트부터 진행한다. 클라우디움 API는 미확인이다.
+사용자가 지정한 로컬 VS Code 설정 파일의 구조를 확인했다. `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, 모델별 `ANTHROPIC_DEFAULT_*_MODEL`을 읽는 Anthropic 호환 어댑터를 구현하고 실제 loopback HTTP로 검증했다. 실제 내부 주소·토큰·모델 식별자는 이 저장소에 복사하지 않았다. vLLM 또는 앞단 게이트웨이의 실제 구현/버전과 엔드포인트 동작은 아직 확인하지 않았다. 클라우디움 API는 미확인이다.
 
 ## 현재 PC의 검증용 준비물
 

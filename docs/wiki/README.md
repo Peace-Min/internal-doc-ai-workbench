@@ -9,6 +9,8 @@
 - [고정 SDK 기술 조사](../06-desktop-api-research.md)
 - [PoC QA 결과](../qa/2026-10-18-poc.md)
 - [실제 Desktop QA 결과](../qa/2026-10-18-desktop.md)
+- [사내 LLM 게이트웨이 연결](internal-llm.md)
+- [Anthropic 어댑터 QA](../qa/2026-10-18-anthropic.md)
 
 ## 향후 문서
 

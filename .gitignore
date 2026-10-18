@@ -2,6 +2,8 @@
 .env
 .env.*
 !.env.example
+/config.json
+/settings.local.json
 *.pem
 *.key
 *.pfx

@@ -1,6 +1,6 @@
 {
   "name": "internal-doc-ai-workbench",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -8,6 +8,7 @@
   "scripts": {
     "start": "node --env-file-if-exists=.env src/server.mjs",
     "test": "node --test",
+    "inspect-config": "node scripts/inspect-config.mjs",
     "package": "node scripts/package.mjs"
   }
 }

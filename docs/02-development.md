@@ -33,7 +33,7 @@
 | D06 | PDF 기능 구현 | 확정된 편집 범위의 테스트 |
 | D07 | 반입 패키지 생성 | 버전 목록·모델 목록·설치 절차 |
 
-현재 D01은 고정 SDK 소스 조사 완료, D02는 실제 Desktop Editors의 단순 PPTX 기본 흐름까지 검증했다. D03의 OpenAI 호환 어댑터 코드는 모의 HTTP 응답으로만 시험했다. D04~D07 전체 실증은 미완료다. 버전 근거와 API 지원표는 [기술 조사](06-desktop-api-research.md), 실증 범위는 [Desktop QA](qa/2026-10-18-desktop.md)를 참고한다.
+현재 D01은 고정 SDK 소스 조사 완료, D02는 실제 Desktop Editors의 단순 PPTX 기본 흐름까지 검증했다. D03은 OpenAI/Anthropic 어댑터 구현과 로컬 모의 HTTP QA 완료이며 실제 사내 서버 검증은 미완료다. D04~D07 전체 실증도 미완료다. [기술 조사](06-desktop-api-research.md), [Desktop QA](qa/2026-10-18-desktop.md), [LLM QA](qa/2026-10-18-anthropic.md)를 참고한다.
 
 ## AI 변경 데이터 초안
 

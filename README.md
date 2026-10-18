@@ -2,7 +2,7 @@
 
 폐쇄망의 클라우디움 문서를 열어 편집하고, 사내 LLM으로 내용을 질의·요약·보완하는 문서 워크벤치.
 
-현재 상태: **PC 설치형 플러그인 PoC 0.2.0**. 실제 ONLYOFFICE Desktop Editors 10.0.0에서 단순 PPTX 읽기·수정안 적용·undo/redo·저장·재열기를 확인했다. 사내 LLM·클라우디움·Marker 연결과 완전한 폐쇄망 배포는 검증 전이다.
+현재 상태: **PC 설치형 플러그인 PoC 0.3.0**. 실제 Desktop Editors의 단순 PPTX 기본 흐름을 확인했고, Anthropic/OpenAI 호환 LLM 어댑터와 로컬 설정 읽기를 구현했다. 자동 테스트 26개 통과. 실제 사내 LLM·클라우디움·Marker 연결과 완전한 폐쇄망 배포는 검증 전이다.
 
 ## 목표
 
@@ -20,6 +20,7 @@
 | 개발 | [아키텍처와 기술 검증](docs/02-development.md) |
 | QA | [검증 계획](docs/03-qa.md) |
 | Wiki | [운영·설치 지식 문서](docs/wiki/README.md) |
+| 사내 LLM | [Claude 설정 / Anthropic 게이트웨이 연결](docs/wiki/internal-llm.md) |
 | 라이선스 | [의존성 역할과 조건](docs/04-dependencies.md) |
 | 결정 이력 | [결정과 미확정 사항](docs/05-decisions.md) |
 | 재개 | [다른 PC·세션에서 이어가기](HANDOFF.md) |
