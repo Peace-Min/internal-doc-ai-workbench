@@ -29,6 +29,8 @@ README.md → 이 문서 → docs/05-decisions.md → docs/02-development.md 순
 
 ## 다음 작업
 
+최신 0.3.1: 화면 제어 없는 `npm run diagnose-llm` 구현. 합성 문장만 전송하고 주소·키·모델 식별자·응답 원문은 출력하지 않는다. mock/설정 오류는 요청 전 거부한다. 자동 테스트 32개 통과, 실제 사내 요청은 미실행. 절차는 docs/wiki/internal-llm.md, 결과는 docs/qa/2026-10-18-diagnostics.md. 다음 세션에서는 이 기능을 다시 개발하지 말고 폐쇄망 실제 연결 확인 또는 아래 미완료 작업을 진행한다.
+
 1. `npm test` 후 `npm run package`로 소스 상태와 배포물을 재현한다. 외부 npm 의존성이 없다.
 2. 별도 VM/전용 테스트 PC가 준비된 뒤 실제 엔진에서 선택변경/원문 충돌/삭제 시나리오와 `.plugin` UI 설치를 추가 검증한다. 사용자 PC에서는 직접 UI 제어를 하지 않는다. 기본 읽기→모의 AI→적용→undo/redo→저장·재열기는 완료했으므로 반복부터 시작하지 않는다.
 3. 사내 LLM은 Anthropic Messages 호환 변수를 사용하는 구성으로 확인하여 어댑터 구현과 모의 HTTP QA 완료. 다음은 폐쇄망에서 합성 문장으로 실제 게이트웨이 응답 확인. config dry-run을 live 연결 완료로 간주하지 않는다.

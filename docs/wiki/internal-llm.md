@@ -72,6 +72,31 @@ WB_LLM_MAX_TOKENS=2048
 
 ## 실행 및 실제 연결 확인
 
+편집기나 브라우저를 열기 전에, 위의 로컬 `.env` 설정으로 진단 CLI를 실행할 수 있다.
+
+```sh
+npm run diagnose-llm
+```
+
+`inspect-config`와 달리 이 명령은 **설정한 게이트웨이에 고정된 합성 문장을 실제 전송**한다. 문서 파일이나 임의 입력은 받지 않는다. 주소·키·모델 식별자·응답 원문을 출력하지 않고 JSON 결과만 출력한다. 기본 mock 모드는 연결 성공으로 처리하지 않는다. 기본 제한 시간은 10초이며 `.env`의 `WB_PROBE_TIMEOUT_MS`로 1~30000ms를 지정할 수 있다.
+
+| 결과 code | 의미 / 확인할 사항 |
+| --- | --- |
+| OK | 응답을 받아 한 줄 수정안 형식 검증 통과. 문장 품질·문서 편집·전체 통합 성공을 보장하지 않는다. |
+| MOCK_MODE | 모의 모드. 실제 연결 모드 설정 필요. 요청하지 않음. |
+| CONFIG_INVALID / CLI_ARGUMENTS | 설정 또는 지원하지 않는 명령 인자. 요청하지 않음. |
+| UPSTREAM_AUTH | HTTP 401/403. 인증·권한·게이트웨이 정책 확인. |
+| UPSTREAM_RATE_LIMIT | HTTP 429. 사용량 제한·서버 상태 확인. |
+| UPSTREAM_HTTP | 기타 HTTP 오류. 비노출 상태 코드만 제공. |
+| UPSTREAM_TIMEOUT | 연결 또는 응답 본문 수신 중 제한 시간 초과. 네트워크·모델 처리 시간 확인. |
+| UPSTREAM_CONNECTION | 연결·TLS·redirect 등 요청 실패. 서버 도달 여부는 별도 확인 필요. |
+| UPSTREAM_RESPONSE_TOO_LARGE | 응답 64KiB 초과. |
+| UPSTREAM_INVALID_RESPONSE | JSON·종료 사유·수정안 형식 등 부적합. |
+
+종료 코드는 성공 `0`, 설정 단계 오류 `2`, 요청/응답 오류 `3`이다. `networkRequestAttempted: true`는 요청을 시도했다는 뜻이며 서버에 도달했다는 보장은 아니다. 진단은 로컬 서비스의 pairing token을 생성하지 않는다.
+
+플러그인에서 요청하려면 다음으로 로컬 서비스를 실행한다.
+
 ```sh
 npm start
 ```
