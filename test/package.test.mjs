@@ -48,6 +48,8 @@ test('distribution includes launcher, plugin, source and notices without local s
       assert.ok(!entries.has('runtime/node.exe'));
       assert.ok(!/(?<!\r)\n/.test(entries.get('Start-Workbench.cmd').toString('utf8')), 'Windows launcher has CRLF line endings');
       const plugin = zipEntries(entries.get('internal-ai-workbench.plugin'));
+      assert.ok(plugin.has('report.js'));
+      assert.ok(plugin.get('index.html').toString('utf8').includes('src="report.js"'));
       assert.equal(JSON.parse(plugin.get('config.json').toString('utf8')).version, JSON.parse(entries.get('package.json').toString('utf8')).version);
     }
   }

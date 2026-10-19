@@ -6,6 +6,7 @@ import { createWorkbenchServer } from '../src/server.mjs';
 
 const app = await readFile(new URL('../plugin/app.js', import.meta.url), 'utf8');
 const contract = await readFile(new URL('../plugin/contract.js', import.meta.url), 'utf8');
+const report = await readFile(new URL('../plugin/report.js', import.meta.url), 'utf8');
 const html = await readFile(new URL('../plugin/index.html', import.meta.url), 'utf8');
 const token = 'synthetic-port-test-pairing-code';
 
@@ -34,6 +35,7 @@ function panel(url, fetchImpl, documentError = false) {
   });
   context.window = context;
   vm.runInContext(contract, context);
+  vm.runInContext(report, context);
   vm.runInContext(app, context);
   context.Asc.plugin.init();
   return { get: id => elements.get(id), calls, commands, payloads };
@@ -225,4 +227,98 @@ test('range fields lock while a model request is pending',async()=>{
   assert.equal(ui.get('slide-start').disabled,true);assert.equal(ui.get('slide-end').disabled,true);
   finish(new Response(JSON.stringify({operation:'summarize',answer:'모의 구간 답변',mode:'mock'})));await sending;
   assert.equal(ui.get('slide-start').disabled,false);assert.equal(ui.get('slide-end').disabled,false);
+});
+
+test('history survives scope and mode changes, keeps effective prompts and excludes source text and credentials', async () => {
+  await withServer(async port => {
+    const ui = panel('file:///synthetic/index.html', fetch);
+    ui.get('port').value = port; await ui.get('connect').onclick();
+    ui.get('operation').value = 'summarize'; ui.get('operation').onchange();
+    ui.get('scope').value = 'document'; ui.get('scope').onchange();
+    await ui.get('capture').onclick();
+    await ui.get('request').onsubmit({ preventDefault() {} });
+    const first = ui.get('report').value;
+    assert.match(first, /핵심 사실과 조건을 간결하게 요약/);
+    assert.match(first, /출처: \[슬라이드 1 · 개체 1\]/);
+    assert.match(first, /제외 개체 1개/);
+    assert.match(first, /모의 답변, 실제 분석 아님/);
+    assert.doesNotMatch(first, /다른 슬라이드|합성 내용|synthetic-port-test-pairing-code|127\.0\.0\.1/);
+    ui.get('operation').value = 'ask'; ui.get('operation').onchange();
+    ui.get('scope').value = 'selected'; ui.get('scope').onchange();
+    assert.equal(ui.get('report').value, first);
+    await ui.get('capture').onclick(); ui.get('instruction').value = '두 번째 질문';
+    await ui.get('request').onsubmit({ preventDefault() {} });
+    assert.match(ui.get('report').value, /결과 2/);
+    assert.match(ui.get('report').value, /두 번째 질문/);
+    assert.ok(ui.get('report').value.includes(first));
+    assert.deepEqual(ui.commands, ['inspect_document', 'inspect']);
+    ui.get('clear-history').onclick();
+    assert.equal(ui.get('report').value, '');
+    assert.equal(ui.get('history-section').hidden, true);
+    assert.equal(ui.get('export-report').disabled, true);
+  });
+});
+
+test('twenty records stop read-only requests without dropping results and clearing allows continuation', async () => {
+  let requests = 0;
+  const ui = panel('file:///synthetic/index.html', async url => {
+    const health = String(url).endsWith('/api/health');
+    if (!health) requests++;
+    return new Response(JSON.stringify(health ? { mode: 'mock' } : { operation: 'summarize', answer: '합성 답변', mode: 'mock' }));
+  });
+  await ui.get('connect').onclick();
+  ui.get('operation').value = 'summarize'; ui.get('operation').onchange();
+  await ui.get('capture').onclick();
+  for (let i = 0; i < 20; i++) await ui.get('request').onsubmit({ preventDefault() {} });
+  assert.equal(ui.get('send').disabled, true);
+  const report = ui.get('report').value;
+  assert.match(report, /결과 20/);
+  await ui.get('request').onsubmit({ preventDefault() {} });
+  assert.equal(requests, 20);
+  assert.equal(ui.get('report').value, report);
+  assert.match(ui.get('status').textContent, /20건/);
+  ui.get('clear-history').onclick();
+  assert.equal(ui.get('send').disabled, false);
+  await ui.get('request').onsubmit({ preventDefault() {} });
+  assert.equal(requests, 21);
+  assert.match(ui.get('history-count').textContent, /^1 \/ 20/);
+});
+
+test('pending requests preserve submitted instruction and lock history deletion', async () => {
+  let finish;
+  const ui = panel('file:///synthetic/index.html', async url => String(url).endsWith('/api/health') ? new Response(JSON.stringify({mode:'mock'})) : new Promise(resolve => { finish = resolve; }));
+  await ui.get('connect').onclick();
+  ui.get('operation').value = 'ask'; ui.get('operation').onchange();
+  await ui.get('capture').onclick(); ui.get('instruction').value = '送信時の質問';
+  const sending = ui.get('request').onsubmit({preventDefault(){}});
+  assert.equal(ui.get('clear-history').disabled, true);
+  assert.equal(ui.get('export-report').disabled, true);
+  ui.get('clear-history').onclick(); ui.get('instruction').value = '変更後の質問';
+  finish(new Response(JSON.stringify({operation:'ask', answer:'<script>example</script>\n=1+1', mode:'mock'})));
+  await sending;
+  assert.match(ui.get('report').value, /送信時の質問/);
+  assert.doesNotMatch(ui.get('report').value, /変更後の質問/);
+  assert.match(ui.get('report').value, /<script>example<\/script>\n=1\+1/);
+});
+
+test('invalid, failed and mismatched answers never enter analysis history; unsupported download offers copying', async () => {
+  let response;
+  const ui = panel('file:///synthetic/index.html', async url => {
+    if (String(url).endsWith('/api/health')) return new Response(JSON.stringify({mode:'mock'}));
+    if (response instanceof Error) throw response;
+    return new Response(JSON.stringify(response));
+  });
+  await ui.get('connect').onclick();
+  ui.get('operation').value = 'ask'; ui.get('operation').onchange();
+  await ui.get('capture').onclick(); ui.get('instruction').value = '질문';
+  for (response of [{operation:'ask',answer:''}, {operation:'summarize',answer:'잘못된 작업'}, new Error('합성 네트워크 오류'), Object.assign(new Error('취소'),{name:'AbortError'})]) {
+    await ui.get('request').onsubmit({preventDefault(){}});
+    assert.equal(ui.get('report').value, '');
+  }
+  response = {operation:'ask',answer:'유효 답변',mode:'mock'};
+  await ui.get('request').onsubmit({preventDefault(){}});
+  const saved = ui.get('report').value;
+  ui.get('export-report').onclick();
+  assert.match(ui.get('status').textContent, /직접 복사/);
+  assert.equal(ui.get('report').value, saved);
 });

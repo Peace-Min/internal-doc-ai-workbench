@@ -4,6 +4,13 @@
   if (location.protocol === "http:" && ["127.0.0.1", "localhost"].includes(location.hostname)) $("port").value = location.port || "80";
   const demo = new URLSearchParams(location.search).get("demo") === "1";
   let ready = false, connected = false, busy = false, target = null, controller = null, proposalOperation = null;
+  const history = [];
+  let capturedAt = "";
+  function renderHistory() {
+    $("history-section").hidden = history.length === 0;
+    $("history-count").textContent = `${history.length} / ${WorkbenchReport.MAX_RECORDS}건 · 구간별 답변 모음`;
+    $("report").value = history.length ? WorkbenchReport.format(history) : "";
+  }
   $("operation").value = "replace_text";
   $("scope").value = "selected";
   $("slide-start").value = ""; $("slide-end").value = "";
@@ -15,7 +22,9 @@
   function status(message, error = false) { $("status").textContent = message; $("status").dataset.error = String(error); }
   function controls() {
     $("capture").disabled = !ready || busy;
-    $("send").disabled = !ready || !connected || !target || busy;
+    $("send").disabled = !ready || !connected || !target || busy || ($("operation").value !== "replace_text" && history.length >= WorkbenchReport.MAX_RECORDS);
+    $("export-report").disabled = busy || history.length === 0;
+    $("clear-history").disabled = busy || history.length === 0;
     $("connect").disabled = busy;
     $("port").disabled = busy;
     $("token").disabled = busy;
@@ -140,6 +149,7 @@
       const snapshot = await capture(operation !== "replace_text", $("scope").value, range);
       WorkbenchContract.validateRequest({ operation, text: snapshot.text, instruction: "capture" });
       target = Object.freeze(snapshot);
+      capturedAt = new Date().toISOString();
       $("target").textContent = snapshot.scope === "document" ? `읽은 ${snapshot.slideCount}슬라이드 · 텍스트 ${snapshot.textObjectCount}개` : `슬라이드 ${snapshot.slideIndex + 1} · 개체 ${snapshot.objectId}`;
       if (snapshot.scope === "document" && snapshot.startSlide !== undefined) $("target").textContent += ` · 읽은 범위 ${snapshot.startSlide}~${snapshot.endSlide} / 전체 ${snapshot.documentSlideCount}슬라이드`;
       $("coverage").textContent = snapshot.scope === "document" ? `제외 개체 ${snapshot.skippedObjectCount}개 · 빈 개체 ${snapshot.emptyObjectCount}개. 이미지·표·그룹·노트·마스터는 분석하지 않습니다. 범위·출처 표기 포함 최대 12,000자이며 내용은 자동으로 자르지 않습니다.` : "선택한 텍스트 상자 한 개만 읽었습니다.";
@@ -151,6 +161,9 @@
   $("request").onsubmit = async (event) => {
     event.preventDefault();
     if (busy || !target || !connected) return;
+    if ($("operation").value !== "replace_text" && history.length >= WorkbenchReport.MAX_RECORDS) {
+      status("기록이 20건입니다. 보고서를 내려받고 기록을 지운 뒤 계속하세요.", true); return;
+    }
     clearResult();
     const operation = $("operation").value;
     controller = new AbortController();
@@ -159,6 +172,7 @@
     try {
       const instruction = operation === "summarize" && !$("instruction").value.trim() ? "핵심 사실과 조건을 간결하게 요약해 주세요." : $("instruction").value;
       const body = WorkbenchContract.validateRequest({ operation, text: target.text, instruction });
+      const provenance = { capturedAt, target: $("target").textContent, coverage: $("coverage").textContent, sources: (target.sources || []).map(source => source.label) };
       const result = await api("/api/propose", body);
       if (result.operation !== operation) throw new Error("응답 작업이 요청과 다릅니다. 다시 요청해 주세요.");
       if (operation === "replace_text") {
@@ -168,12 +182,35 @@
       } else {
         $("answer").textContent = WorkbenchContract.validateAnswer(result.answer);
         $("answer-section").hidden = false;
+        history.push({ ...provenance, time: new Date().toISOString(), operation, instruction: body.instruction, answer: $("answer").textContent, mock: result.mode === "mock" });
+        renderHistory();
         status(result.mode === "mock" ? "모의 답변입니다. 실제 질의·요약 결과가 아닙니다." : "읽은 내용에 대한 답변입니다. 근거와 내용을 확인하세요. 문서는 변경하지 않았습니다.");
+        if (history.length === WorkbenchReport.MAX_RECORDS) status("기록 20건을 채웠습니다. 보고서를 내려받고 기록을 지운 뒤 다음 질의·요약을 진행하세요.");
       }
     } catch (error) { status(error.name === "AbortError" ? "요청을 취소했거나 시간이 초과되었습니다." : error.message, true); }
     finally { clearTimeout(timeout); controller = null; busy = false; controls(); }
   };
   $("cancel").onclick = () => controller?.abort();
+  $("clear-history").onclick = () => {
+    if (busy) return;
+    history.length = 0; renderHistory(); controls();
+    status("분석 기록을 지웠습니다. 이미 내려받은 파일은 유지됩니다.");
+  };
+  $("export-report").onclick = () => {
+    if (busy || !history.length) return;
+    let url;
+    try {
+      url = URL.createObjectURL(new Blob(["\ufeff", WorkbenchReport.format(history)], { type: "text/plain;charset=utf-8" }));
+      const link = document.createElement("a");
+      link.href = url; link.download = "workbench-report.txt";
+      document.body.appendChild(link); link.click(); link.remove();
+      status("파일 저장을 요청했습니다. 저장되지 않으면 보고서 내용 보기에서 직접 복사하세요. 기록은 유지됩니다.");
+    } catch {
+      status("파일 저장을 지원하지 않는 환경입니다. 보고서 내용 보기에서 직접 복사하세요.", true);
+    } finally {
+      if (url) setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+  };
   $("proposal").oninput = controls;
   $("apply").onclick = async () => {
     if (busy || !target || $("operation").value !== "replace_text" || $("scope").value !== "selected" || proposalOperation !== "replace_text" || target.readOnly) return;

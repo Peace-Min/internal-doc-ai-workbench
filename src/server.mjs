@@ -10,7 +10,7 @@ import '../plugin/contract.js';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const contract = globalThis.WorkbenchContract;
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.svg': 'image/svg+xml', '.md': 'text/plain; charset=utf-8' };
-const STATIC = new Set(['index.html', 'app.js', 'style.css', 'contract.js', 'editor-command.js', 'config.json', 'icon.svg', 'vendor/plugins.js', 'vendor/AGPL-3.0.txt', 'THIRD_PARTY_NOTICES.md', 'notices.html', 'LICENSE']);
+const STATIC = new Set(['index.html', 'app.js', 'style.css', 'contract.js', 'report.js', 'editor-command.js', 'config.json', 'icon.svg', 'vendor/plugins.js', 'vendor/AGPL-3.0.txt', 'THIRD_PARTY_NOTICES.md', 'notices.html', 'LICENSE']);
 
 async function readLimited(stream, limit = 65536) {
   const parts = []; let length = 0;
@@ -46,7 +46,7 @@ export function createWorkbenchServer(options = {}) {
     if (pathname.startsWith('/api/')) {
       const supplied = Buffer.from(req.headers.authorization || '');
       if (supplied.length !== expectedToken.length || !timingSafeEqual(supplied, expectedToken)) return send(401, { error: '연결 코드를 확인하세요.' });
-      if (req.method === 'GET' && pathname === '/api/health') return send(200, { mode, version: '0.7.0' });
+      if (req.method === 'GET' && pathname === '/api/health') return send(200, { mode, version: '0.8.0' });
       if (req.method !== 'POST' || pathname !== '/api/propose') return send(404, { error: '지원하지 않는 경로입니다.' });
       if (!/^application\/json(?:;|$)/i.test(req.headers['content-type'] || '')) return send(415, { error: 'JSON 요청만 지원합니다.' });
       try {
