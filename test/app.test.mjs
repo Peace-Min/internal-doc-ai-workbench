@@ -16,21 +16,25 @@ function panel(url, fetchImpl) {
   port.value = html.match(/id="port"[^>]*value="([^"]+)"/)[1];
   elements.get('token').value = token;
   elements.get('instruction').value = '합성 문장 보완';
-  const calls = [];
+  const calls = [], commands = [];
   const context = vm.createContext({
     location: new URL(url), URLSearchParams, AbortController, AbortSignal, setTimeout, clearTimeout,
     document: { getElementById: id => elements.get(id) },
     fetch: async (url, options) => { calls.push(String(url)); return fetchImpl(url, options); },
     Asc: { scope: {}, plugin: {
       info: { editorType: 'slide' },
-      callCommand: (_command, _close, _recalculate, callback) => callback({ objectId: 'one', slideIndex: 0, text: '합성 문장' })
+      callCommand: (_command, _close, _recalculate, callback) => {
+        const action = context.Asc.scope.workbenchPayload.action;
+        commands.push(action);
+        callback(action === 'apply' ? { applied: true } : { objectId: 'one', slideIndex: 0, text: action === 'inspect' ? '합성 문장\n두 번째 문단' : '합성 문장', readOnly: action === 'inspect' });
+      }
     } }
   });
   context.window = context;
   vm.runInContext(contract, context);
   vm.runInContext(app, context);
   context.Asc.plugin.init();
-  return { get: id => elements.get(id), calls };
+  return { get: id => elements.get(id), calls, commands };
 }
 
 async function withServer(run) {
@@ -109,4 +113,43 @@ test('connection locks port and token and prevents duplicate health requests', a
   await connecting;
   assert.equal(ui.get('port').disabled, false);
   assert.equal(ui.get('token').disabled, false);
+});
+
+test('questions and summaries display answers without enabling or invoking document writes', async () => {
+  await withServer(async port => {
+    const ui=panel('file:///synthetic/index.html',fetch);
+    ui.get('port').value=port; await ui.get('connect').onclick();
+    for (const operation of ['ask','summarize']) {
+      ui.get('operation').value=operation; ui.get('operation').onchange();
+      assert.equal(ui.get('send').disabled,true);
+      await ui.get('capture').onclick();
+      if(operation==='ask') ui.get('instruction').value='핵심 조건이 무엇인가요?';
+      await ui.get('request').onsubmit({preventDefault(){}});
+      assert.equal(ui.get('answer-section').hidden,false);
+      assert.match(ui.get('answer').textContent,/모의 답변/);
+      assert.equal(ui.get('proposal-section').hidden,true);
+      assert.equal(ui.get('apply').disabled,true);
+      await ui.get('apply').onclick();
+    }
+    assert.deepEqual(ui.commands,['inspect','inspect']);
+    ui.get('operation').value='replace_text'; ui.get('operation').onchange();
+    assert.equal(ui.get('answer-section').hidden,true);
+    assert.equal(ui.get('send').disabled,true);
+    await ui.get('capture').onclick(); ui.get('instruction').value='보완';
+    await ui.get('request').onsubmit({preventDefault(){}});
+    assert.equal(ui.get('apply').disabled,false);
+    await ui.get('apply').onclick();
+    assert.deepEqual(ui.commands,['inspect','inspect','capture','apply']);
+  });
+});
+
+test('mismatched response operations cannot become applicable edits', async () => {
+  const ui=panel('file:///synthetic/index.html',async url=>new Response(JSON.stringify(String(url).endsWith('/api/health') ? {mode:'mock'} : {operation:'ask',answer:'다른 응답',proposedText:'잘못된 수정안'})));
+  await ui.get('connect').onclick(); await ui.get('capture').onclick();
+  await ui.get('request').onsubmit({preventDefault(){}});
+  assert.equal(ui.get('proposal-section').hidden,true);
+  assert.equal(ui.get('apply').disabled,true);
+  assert.match(ui.get('status').textContent,/요청과 다릅니다/);
+  await ui.get('apply').onclick();
+  assert.deepEqual(ui.commands,['capture']);
 });

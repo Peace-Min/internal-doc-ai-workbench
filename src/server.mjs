@@ -46,13 +46,15 @@ export function createWorkbenchServer(options = {}) {
     if (pathname.startsWith('/api/')) {
       const supplied = Buffer.from(req.headers.authorization || '');
       if (supplied.length !== expectedToken.length || !timingSafeEqual(supplied, expectedToken)) return send(401, { error: '연결 코드를 확인하세요.' });
-      if (req.method === 'GET' && pathname === '/api/health') return send(200, { mode, version: '0.4.0' });
+      if (req.method === 'GET' && pathname === '/api/health') return send(200, { mode, version: '0.5.0' });
       if (req.method !== 'POST' || pathname !== '/api/propose') return send(404, { error: '지원하지 않는 경로입니다.' });
       if (!/^application\/json(?:;|$)/i.test(req.headers['content-type'] || '')) return send(415, { error: 'JSON 요청만 지원합니다.' });
       try {
         const input = contract.validateRequest(JSON.parse(await readLimited(req)));
         const proposedText = await propose(input);
-        send(200, { operation: 'replace_text', proposedText: contract.validateProposal(proposedText), mode });
+        send(200, input.operation === 'replace_text'
+          ? { operation: input.operation, proposedText: contract.validateProposal(proposedText), mode }
+          : { operation: input.operation, answer: contract.validateAnswer(proposedText), mode });
       } catch (error) {
         const upstreamError = ['TimeoutError', 'AbortError', 'TypeError'].includes(error.name);
         send(error.status || (upstreamError ? 502 : 400), { error: upstreamError ? 'LLM 연결 실패 또는 응답 시간 초과입니다.' : '요청 또는 수정안 형식이 올바르지 않습니다.' });

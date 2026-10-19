@@ -25,4 +25,6 @@
 
 ## 실제 엔진에서 확인할 사항
 
+0.5.0 inspect는 위에서 확인한 GetAllParagraphs/GetElementsCount/GetElement/run.GetText를 순회하여 여러 문단·run을 읽는다. 새 쓰기 API는 사용하지 않는다. 모의 API의 쓰기 호출 0회 및 헤드리스 데모를 검증했으며 실제 Desktop에서 새 읽기 범위를 실행한 것은 아니다. [질의·요약 QA](qa/2026-10-19-read-only.md)를 참고한다.
+
 패널 활성화 시 선택 개체 유지, callCommand 콜백, Origin/localhost 통신, ClearContent+AddText의 단일 undo/redo, 저장·재열기는 단순 합성 PPTX로 확인했다. 실제 Origin은 `file://`였다. run/shape 서식 XML은 보존되었고 저장 시 drawing ID는 변경되었다. 내부 ID는 영구 문서 식별자로 취급하지 않는다. 복잡한 문서·그룹·다중 nonempty run·동시 편집 등은 추가 검증한다.

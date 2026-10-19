@@ -9,7 +9,7 @@ function fixture(hooks = {}) {
     const key = id === 'one' ? 'text' : 'second';
     let clears = 0, adds = 0;
     const run = {
-      GetClassType:()=> 'run', GetText:()=>state[key],
+      GetClassType:()=> state.runType || 'run', GetText:()=>state[key],
       ClearContent:()=>{
         state.writes++;
         if (hooks.clear) return hooks.clear(state, key, ++clears);
@@ -21,7 +21,7 @@ function fixture(hooks = {}) {
       }
     };
     const paragraph = { GetElementsCount:()=>state.runs+state.emptyRuns, GetElement:(i)=>i<state.emptyRuns?{GetClassType:()=> 'run',GetText:()=>''}:run };
-    return { GetInternalId:()=>id, GetClassType:()=> 'shape', GetContent:()=>({GetAllParagraphs:()=>Array(state.paragraphs).fill(paragraph)}) };
+    return { GetInternalId:()=>id, GetClassType:()=>state.shapeType || 'shape', GetContent:()=>({GetAllParagraphs:()=>Array(state.paragraphs).fill(paragraph)}) };
   }
   const context = vm.createContext({ Asc: { scope: {} }, Api: {
     GetSelection:()=>({GetType:()=> 'shapes',GetShapes:()=>[shape(state.selected)]}),
@@ -56,6 +56,27 @@ test('empty formatting runs do not prevent editing the single nonempty run', () 
   assert.equal(target.text,'원래 문장');
   assert.equal(invoke({action:'apply',target,proposedText:'수정 문장'}).applied,true);
   assert.equal(state.text,'수정 문장');
+});
+
+test('read-only inspection reads multiple paragraphs and runs without modifying text', () => {
+  const {state,invoke}=fixture(); state.runs=2; state.paragraphs=2; state.emptyRuns=1;
+  const snapshot=invoke({action:'inspect'});
+  assert.equal(snapshot.text,'원래 문장원래 문장\n원래 문장원래 문장');
+  assert.equal(snapshot.readOnly,true);
+  assert.equal(state.writes,0);
+  assert.ok(invoke({action:'apply',target:snapshot,proposedText:'수정 문장'}).error);
+  assert.equal(state.writes,0);
+});
+
+test('inspection rejects unsupported structures and oversized or empty text without writes', () => {
+  for (const change of [{text:''}, {text:'\u0000'}, {text:'x'.repeat(12001)}, {paragraphs:2,text:'x'.repeat(6000)}, {shapeType:'group'}, {runType:'hyperlink'}]) {
+    const {state,invoke}=fixture(); Object.assign(state,change);
+    assert.ok(invoke({action:'inspect'}).error,JSON.stringify(change).slice(0,80));
+    assert.equal(state.writes,0);
+  }
+  const {state,invoke}=fixture(); state.text='x'.repeat(12000);
+  assert.equal(invoke({action:'inspect'}).text.length,12000);
+  assert.equal(state.writes,0);
 });
 test('invalid proposal cannot clear the original', () => {
   for(const text of ['', 'two\nlines', 'x'.repeat(12001), null]) {
