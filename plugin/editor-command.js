@@ -38,11 +38,22 @@ function workbenchEditorCommand() {
     if (text !== payload.target.text) return { error: "원문이 변경되었습니다. 다시 읽고 요청해 주세요." };
     if (typeof payload.proposedText !== "string" || !payload.proposedText.trim() || payload.proposedText.length > 12000 || /[\r\n\u0000]/.test(payload.proposedText)) return { error: "수정안 형식이 올바르지 않습니다." };
     // Reuse the existing run so its character properties remain attached.
-    if (run.ClearContent() !== true) return { error: "텍스트를 수정할 수 없습니다." };
-    if (run.AddText(payload.proposedText) !== true) {
-      run.ClearContent();
-      run.AddText(text);
-      return { error: "수정 실패로 원문 복구를 시도했습니다. 문서를 확인해 주세요." };
+    try {
+      if (run.ClearContent() !== true) throw new Error("clear failed");
+      if (run.AddText(payload.proposedText) !== true || run.GetText() !== payload.proposedText) throw new Error("insert failed");
+    } catch (writeError) {
+      // An API may mutate before returning false or throwing. Verify recovery too.
+      var restored = false;
+      try {
+        if (run.GetText() === text) restored = true;
+        else if (run.ClearContent() === true) restored = run.AddText(text) === true && run.GetText() === text;
+      } catch (restoreError) { /* Report uncertainty instead of claiming recovery. */ }
+      return {
+        error: restored
+          ? "수정에 실패했습니다. 원문이 유지되었거나 복구되었습니다. 문서를 확인해 주세요."
+          : "수정에 실패했고 원문 복구를 확인하지 못했습니다. 추가 편집·저장 전에 문서를 확인하고 편집기의 실행 취소 또는 저장 전 사본으로 복구해 주세요.",
+        recoveryFailed: !restored
+      };
     }
     return { applied: true, objectId: shape.GetInternalId() };
   } catch (error) {

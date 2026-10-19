@@ -12,6 +12,7 @@
 - [사내 LLM 게이트웨이 연결](internal-llm.md)
 - [Anthropic 어댑터 QA](../qa/2026-10-18-anthropic.md)
 - [화면 제어 없는 LLM 진단 CLI QA](../qa/2026-10-18-diagnostics.md)
+- [편집 실패 원문 복구 QA](../qa/2026-10-19-recovery.md)
 
 ## 향후 문서
 
