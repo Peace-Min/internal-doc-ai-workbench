@@ -4,7 +4,13 @@
 
 ## 현재 상태 (2026-10-20)
 
-호스트의 Sandbox 기능 활성화는 성공했지만 Windows가 재부팅을 요구했다. 자동 재부팅은 하지 않았다. 반입 패키지는 준비됐으며 **VM 첫 부팅·게스트 설치·실제 Desktop UI QA는 아직 미실행**이다. 기능 설치와 앱 동작 검증을 구분한다.
+이전 실행 환경에서는 기능 활성화·반입 준비 후 재부팅 대기까지 확인했다. 그러나 Git의 기록과 로컬 Windows 기능·비공개 반입 파일은 함께 이동하지 않는다. 이번 세션의 현재 환경에서는 기능 비활성·CLI 부재·기존 반입 파일 부재를 확인했다. **VM 첫 부팅·게스트 설치·실제 Desktop UI QA는 아직 미실행**이다. 세션을 이어갈 때 다음 점검부터 실행한다.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/vm/Start-WindowsSandbox.ps1 -ConfigFile ../work/vm/windows-sandbox/Workbench-QA.wsb -Check
+```
+
+`-Check`는 기능 설치·재부팅·VM 시작·설정 파일 생성을 하지 않는다. JSON의 `configExists`, `inputFilesPresent`, `featureEnabled`, `cliAvailable`, `restartRequired`, `environmentReadFailed`로 준비 상태를 구분하고 전제 미충족 시 종료 코드 1, 충족 시 0을 반환한다. `ready`는 시작 전제만 뜻하며 입력 해시·게스트 부팅·실제 앱 QA 성공을 보장하지 않는다. 해시는 준비기와 게스트가 별도로 검사한다. `restartRequired:false`라도 기능이 비활성이면 활성화부터 필요하며, 관리자 설치 후 반환된 재부팅 필요 여부를 다시 확인한다.
 
 ## 반입 패키지 준비
 

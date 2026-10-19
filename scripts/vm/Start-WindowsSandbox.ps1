@@ -1,17 +1,34 @@
-param([Parameter(Mandatory=$true)][string]$ConfigFile)
+param([Parameter(Mandatory=$true)][string]$ConfigFile,[switch]$Check)
 $ErrorActionPreference='Stop'
-$configPath=(Resolve-Path -LiteralPath $ConfigFile).Path
+$configPath=[IO.Path]::GetFullPath($ConfigFile)
 $stage=Split-Path -Parent $configPath
 $enableResult=Join-Path $stage 'enable-result.json'
-if(Test-Path -LiteralPath $enableResult){
-  $enable=Get-Content -LiteralPath $enableResult -Raw | ConvertFrom-Json
-  $boot=(Get-CimInstance Win32_OperatingSystem).LastBootUpTime.ToUniversalTime()
-  if($enable.restartNeeded -and $boot -lt (Get-Item -LiteralPath $enableResult).LastWriteTimeUtc){throw 'Restart Windows before starting this sandbox. No automatic restart is performed.'}
+$readiness=@{ready=$false;configExists=(Test-Path -LiteralPath $configPath -PathType Leaf);inputFilesPresent=$true;featureEnabled=$false;cliAvailable=$false;restartRequired=$false;environmentReadFailed=$false;vmStarted=$false;automaticRestart=$false}
+foreach($name in @('manifest.json','guest-only.marker','DesktopEditors.zip','node.exe','NODE-LICENSE','workbench-source.zip','Bootstrap-Guest.ps1')){
+  if(-not (Test-Path -LiteralPath (Join-Path $stage "input\$name") -PathType Leaf)){$readiness.inputFilesPresent=$false}
 }
-$feature=Get-CimInstance Win32_OptionalFeature -Filter "Name='Containers-DisposableClientVM'"
-if($feature.InstallState -ne 1){throw 'Windows Sandbox is not enabled. Run Enable-WindowsSandbox.ps1 as administrator and restart if required.'}
+try {
+  if(Test-Path -LiteralPath $enableResult){
+    $enable=Get-Content -LiteralPath $enableResult -Raw | ConvertFrom-Json
+    $boot=(Get-CimInstance Win32_OperatingSystem).LastBootUpTime.ToUniversalTime()
+    $readiness.restartRequired=[bool]($enable.restartNeeded -and $boot -lt (Get-Item -LiteralPath $enableResult).LastWriteTimeUtc)
+  }
+  $feature=Get-CimInstance Win32_OptionalFeature -Filter "Name='Containers-DisposableClientVM'"
+  $readiness.featureEnabled=$feature.InstallState -eq 1
+}catch{$readiness.environmentReadFailed=$true}
 $wsb=Get-Command wsb.exe -ErrorAction SilentlyContinue
-if(-not $wsb){throw 'Windows Sandbox CLI (wsb.exe) is unavailable. Check Windows Sandbox installation on Windows 11 24H2 or later.'}
+$readiness.cliAvailable=[bool]$wsb
+$readiness.ready=$readiness.configExists -and $readiness.inputFilesPresent -and $readiness.featureEnabled -and $readiness.cliAvailable -and -not $readiness.restartRequired -and -not $readiness.environmentReadFailed
+if($Check){
+  $readiness | ConvertTo-Json
+  if(-not $readiness.ready){exit 1}
+  exit 0
+}
+if($readiness.environmentReadFailed){throw 'Unable to inspect Windows readiness. Run with -Check to inspect prerequisites.'}
+if($readiness.restartRequired){throw 'Restart Windows before starting this sandbox. No automatic restart is performed.'}
+if(-not $readiness.featureEnabled){throw 'Windows Sandbox is not enabled. Run Enable-WindowsSandbox.ps1 as administrator and restart if required.'}
+if(-not $readiness.cliAvailable){throw 'Windows Sandbox CLI (wsb.exe) is unavailable. Check Windows Sandbox installation on Windows 11 24H2 or later.'}
+if(-not $readiness.configExists -or -not $readiness.inputFilesPresent){throw 'Sandbox input bundle is missing. Prepare this PC with prepare-sandbox.mjs before starting.'}
 $stateFile=Join-Path $stage 'host-state.json'
 if(Test-Path -LiteralPath $stateFile){
   $old=Get-Content -LiteralPath $stateFile -Raw | ConvertFrom-Json
