@@ -1,5 +1,6 @@
 * text=auto eol=lf
 *.png binary
+*.pdf binary
 *.zip binary
 *.plugin binary
 *.cmd text eol=crlf
