@@ -1,0 +1,161 @@
+{
+  "schemaVersion": 1,
+  "synthetic": true,
+  "cases": [
+    {
+      "id": "q01",
+      "question": "What is the approved budget for ORBIT in USD?",
+      "answer": "950",
+      "page": 1,
+      "category": "table"
+    },
+    {
+      "id": "q02",
+      "question": "What is the approved budget for CEDAR in USD?",
+      "answer": "430",
+      "page": 1,
+      "category": "table"
+    },
+    {
+      "id": "q03",
+      "question": "What is the approved budget for MAPLE in USD?",
+      "answer": "680",
+      "page": 1,
+      "category": "table"
+    },
+    {
+      "id": "q04",
+      "question": "What is the approved budget for CORAL in USD?",
+      "answer": "275",
+      "page": 1,
+      "category": "table"
+    },
+    {
+      "id": "q05",
+      "question": "What is the approved budget for DELTA in USD?",
+      "answer": "810",
+      "page": 1,
+      "category": "table"
+    },
+    {
+      "id": "q06",
+      "question": "What is the approved budget for LUNAR in USD?",
+      "answer": "560",
+      "page": 1,
+      "category": "table"
+    },
+    {
+      "id": "q07",
+      "question": "Who owns ORBIT?",
+      "answer": "NORA",
+      "page": 1,
+      "category": "prose"
+    },
+    {
+      "id": "q08",
+      "question": "What is the review month?",
+      "answer": "NOVEMBER",
+      "page": 1,
+      "category": "prose"
+    },
+    {
+      "id": "q09",
+      "question": "What is the delivery city?",
+      "answer": "BUSAN",
+      "page": 1,
+      "category": "prose"
+    },
+    {
+      "id": "q10",
+      "question": "How many months is the warranty?",
+      "answer": "18",
+      "page": 1,
+      "category": "prose"
+    },
+    {
+      "id": "q11",
+      "question": "Who manages NORTH?",
+      "answer": "ALMA",
+      "page": 2,
+      "category": "columns"
+    },
+    {
+      "id": "q12",
+      "question": "How many staff are in NORTH?",
+      "answer": "17",
+      "page": 2,
+      "category": "columns"
+    },
+    {
+      "id": "q13",
+      "question": "What is the SOUTH audit code?",
+      "answer": "S81",
+      "page": 2,
+      "category": "columns"
+    },
+    {
+      "id": "q14",
+      "question": "What is the SOUTH reserve fund?",
+      "answer": "48",
+      "page": 2,
+      "category": "columns"
+    },
+    {
+      "id": "q15",
+      "question": "What is the CEO name?",
+      "answer": "UNKNOWN",
+      "page": null,
+      "category": "unanswerable"
+    },
+    {
+      "id": "q16",
+      "question": "What is the bank account number?",
+      "answer": "UNKNOWN",
+      "page": null,
+      "category": "unanswerable"
+    },
+    {
+      "id": "q17",
+      "question": "What is the final tax amount?",
+      "answer": "UNKNOWN",
+      "page": null,
+      "category": "unanswerable"
+    },
+    {
+      "id": "q18",
+      "question": "What is the actual completion year?",
+      "answer": "UNKNOWN",
+      "page": null,
+      "category": "unanswerable"
+    },
+    {
+      "id": "q19",
+      "question": "Who manages the EAST region?",
+      "answer": "UNKNOWN",
+      "page": null,
+      "category": "unanswerable"
+    },
+    {
+      "id": "q20",
+      "question": "What is the approved budget for PLUTO?",
+      "answer": "UNKNOWN",
+      "page": null,
+      "category": "unanswerable"
+    },
+    {
+      "id": "q21",
+      "question": "What is the scanned invoice code?",
+      "answer": "RAVEN",
+      "page": 3,
+      "category": "scan"
+    },
+    {
+      "id": "q22",
+      "question": "What is the scanned invoice amount in USD?",
+      "answer": "437",
+      "page": 3,
+      "category": "scan"
+    }
+  ],
+  "documentSha256": "baa6cd307b827ce27318f0ea42b36aa58c1cc4c720a11c451a43460bf8aafd6f"
+}

@@ -1,5 +1,9 @@
 # 오픈소스 역할 및 라이선스
 
+## 2026-10-20 선택적 분석 실험
+
+실제 Marker 2.0.0(Apache-2.0)과 Surya 0.22.1을 별도 Python 환경에서 사용했다. 인식 모델은 코드와 별도 조건이며 실험 모델/리비전은 docs/qa/assets/marker-benchmark/environment.json에 기록했다. 모델 가중치·Python wheel·추론 바이너리는 공개 저장소/프로젝트 ZIP에 포함하지 않았다. [Marker 2.0.0 코드 고지](https://github.com/datalab-to/marker/blob/v2.0.0/LICENSE)와 [모델 조건](https://github.com/datalab-to/marker/blob/v2.0.0/MODEL_LICENSE)은 도입 환경별로 확인한다. 전체 Python 설치 버전은 scripts/marker/requirements.lock이다.
+
 확인 기준일: 2026-10-18. 아래는 후보 조사이며 실제 도입 버전의 LICENSE·NOTICE·파일 헤더·모델 카드와 전이 의존성을 다시 확인한다.
 
 | 후보 | 역할 | 라이선스 | 판단 |

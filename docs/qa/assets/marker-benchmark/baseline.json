@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "engine": "pdfplumber",
+  "documentSha256": "baa6cd307b827ce27318f0ea42b36aa58c1cc4c720a11c451a43460bf8aafd6f",
+  "pages": [
+    {
+      "page": 1,
+      "text": "Synthetic project register\nAll amounts are in USD. This is fictional evaluation material.\nThe owner of project ORBIT is NORA.\nThe review month is NOVEMBER.\nThe delivery city is BUSAN.\nThe warranty period is 18 months.\nOnly approved budgets are listed below. Proposed values are not approved.\nProject Approved budget Proposed budget Delivery day\nORBIT 950 1200 20\nCEDAR 430 470 12\nMAPLE 680 720 25\nCORAL 275 310 16\nDELTA 810 900 28\nLUNAR 560 600 14"
+    },
+    {
+      "page": 2,
+      "text": "Independent regional notes\nNORTH region SOUTH region\nManager: ALMA Manager: BERN\nStaff count: 17 Staff count: 29\nAudit code: N42 Audit code: S81\nReserve fund: 63 Reserve fund: 48"
+    },
+    {
+      "page": 3,
+      "text": ""
+    }
+  ]
+}

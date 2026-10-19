@@ -1,5 +1,9 @@
 # 개발 설계 및 기술 검증
 
+## 0.11.0 선택적 Marker 분석
+
+scripts/marker의 Python 추출기가 PDF 해시·페이지 번호·Marker Markdown 패킷을 만든다. marker-context.mjs는 200페이지·12,000자 한도와 출처를 검증한다. evaluate-grounding.mjs는 loopback 모델만 허용하고 짝지은 합성 평가의 전체 응답과 대리 지표를 저장한다. Python 의존성은 선택 사항이며 Node 앱의 기본 실행·테스트에는 추가하지 않는다. PDF 패널 UI 통합은 후속 단계다.
+
 ## 0.10.0 실제 모델 검증 명령
 
 local-verification.mjs와 verify-local-llm CLI를 추가했다. 기존 설정 로더·인증 브리지·응답 계약을 재사용하고 명시 loopback 주소만 허용한다. 고정 합성 자료의 질문·요약·문장 보완을 순차 요청하며 원문 대신 형식 통과·시간·길이·기초 관찰값만 보고한다. 외부 의존성과 기본 네트워크 테스트를 추가하지 않는다.

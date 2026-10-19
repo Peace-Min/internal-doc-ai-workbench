@@ -1,7 +1,7 @@
 {
   "name": "Internal AI Workbench",
   "guid": "asc.{A5BA9AF1-7BCE-4B75-86F7-C28D4E922B1B}",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "minVersion": "10.0.0",
   "baseUrl": "",
   "variations": [{

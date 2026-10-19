@@ -4,6 +4,9 @@
 
 ## 작성 상태
 
+- [Marker 추출과 할루시네이션 대리 지표 비교](marker-evaluation.md)
+- [실제 Marker 평가 QA](../qa/2026-10-20-marker.md)
+
 - [실제 로컬 추론 통합 QA](../qa/2026-10-19-local-llm.md)
 
 - [기록별 원문·출처 대조](analysis-report.md)

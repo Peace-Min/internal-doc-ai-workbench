@@ -1,5 +1,5 @@
 {
-  "poc": "0.10.0",
+  "poc": "0.11.0",
   "portableNode": {
     "version": "24.22.0",
     "platform": "win-x64",
@@ -16,7 +16,7 @@
   "desktopSdkjsCommit": "72b0421c0bbf9d01eed9cf14834ae47eb2df1b50",
   "pluginBootstrapCommit": "f3263c055c25875874004463b46c2e6a7000a9fd",
   "pluginBootstrapSha256": "1bc0bd71eebcb477ceaaee3ab00ed1a10ce7eae117ec68ae8024645c435f524e",
-  "marker": "not-integrated",
+  "marker": "2.0.0 optional extraction/evaluation CLI; editor UI not integrated",
   "llmProtocols": ["mock", "openai-compatible", "anthropic-compatible"],
   "runtimeNpmDependencies": []
 }

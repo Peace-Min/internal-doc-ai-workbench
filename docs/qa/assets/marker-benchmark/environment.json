@@ -1,0 +1,16 @@
+{
+  "synthetic": true,
+  "python": "3.12.14",
+  "marker": "2.0.0",
+  "surya": "0.22.1",
+  "pdfplumber": "0.11.9",
+  "qaModel": "qwen2.5:1.5b Q4_K_M",
+  "qaRuntime": "llama.cpp b8201 (24d2ee052)",
+  "qaThreads": 2,
+  "qaContextTokens": 4096,
+  "ocrModelRepository": "datalab-to/surya-ocr-2-gguf",
+  "ocrModelRevision": "6a3a4c30e5e74446d4f8b6afd05b2f2da970f470",
+  "layoutModelRepository": "datalab-to/surya_layout2",
+  "layoutModelRevision": "0aee81d5fd9275c0582e545bf3a56944b1e75679",
+  "documentSha256": "baa6cd307b827ce27318f0ea42b36aa58c1cc4c720a11c451a43460bf8aafd6f"
+}

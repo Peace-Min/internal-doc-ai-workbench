@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "engine": "marker",
+  "markerVersion": "2.0.0",
+  "documentSha256": "baa6cd307b827ce27318f0ea42b36aa58c1cc4c720a11c451a43460bf8aafd6f",
+  "mode": "fast",
+  "ocr": true,
+  "useLlm": false,
+  "durationSeconds": 25.38,
+  "pages": [
+    {
+      "page": 1,
+      "text": "All amounts are in USD. This is fictional evaluation material.\n\nThe owner of project ORBIT is NORA.\n\nThe review month is NOVEMBER.\n\nThe delivery city is BUSAN.\n\nThe warranty period is 18 months.\n\nOnly approved budgets are listed below. Proposed values are not approved.\n\n| Project | Approved budget | Proposed budget | Delivery day |\n|---------|-----------------|-----------------|--------------|\n| ORBIT   | 950             | 1200            | 20           |\n| CEDAR   | 430             | 470             | 12           |\n| MAPLE   | 680             | 720             | 25           |\n| CORAL   | 275             | 310             | 16           |\n| DELTA   | 810             | 900             | 28           |\n| LUNAR   | 560             | 600             | 14           |"
+    },
+    {
+      "page": 2,
+      "text": "## **NORTH region SOUTH region**\n\nManager: ALMA Manager: BERN\n\nStaff count: 17 Staff count: 29\n\nAudit code: N42 Audit code: S81\n\nReserve fund: 63 Reserve fund: 48"
+    },
+    {
+      "page": 3,
+      "text": "SCANNED ONLY - synthetic invoice\n\nInvoice code: RAVEN\n\nInvoice amount: 437 USD\n\nInvoice month: APRIL"
+    }
+  ]
+}
