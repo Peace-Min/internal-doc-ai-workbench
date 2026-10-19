@@ -4,6 +4,8 @@
 
 ## 작성 상태
 
+- [실제 로컬 추론 통합 QA](../qa/2026-10-19-local-llm.md)
+
 - [기록별 원문·출처 대조](analysis-report.md)
 - [대조 기능 QA](../qa/2026-10-19-review.md)
 - [현재 PC 로컬 LLM 준비](local-llm.md)

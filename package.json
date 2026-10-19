@@ -1,6 +1,6 @@
 {
   "name": "internal-doc-ai-workbench",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "private": true,
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -12,6 +12,7 @@
     "test": "node --test",
     "inspect-config": "node scripts/inspect-config.mjs",
     "diagnose-llm": "node --env-file-if-exists=.env scripts/diagnose-llm.mjs",
+    "verify-local-llm": "node --env-file-if-exists=.env scripts/verify-local-llm.mjs",
     "package": "node scripts/package.mjs"
   }
 }

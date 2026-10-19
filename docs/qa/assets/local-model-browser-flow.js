@@ -1,0 +1,37 @@
+async (page) => {
+  const check=(value,message)=>{if(!value)throw new Error(message);};
+  await page.getByRole('textbox',{name:'연결 코드',exact:true}).fill('synthetic-live-model-pairing-code');
+  await page.getByRole('button',{name:'연결 확인',exact:true}).click();
+  const original='합성 프로젝트 예산은 950만원이며 완료일은 11월 20일입니다.';
+  await page.getByRole('textbox',{name:'문서 내용 (직접 변경 가능)',exact:true}).fill(original);
+  await page.getByRole('combobox',{name:'작업',exact:true}).selectOption('ask');
+  await page.getByRole('combobox',{name:'분석 범위',exact:true}).selectOption('document');
+  await page.getByRole('button',{name:'문서 텍스트 읽기',exact:true}).click();
+  await page.getByRole('textbox',{name:'읽은 내용에 대해 무엇이 궁금한가요?',exact:true}).fill('예산이 얼마인지 출처와 함께 한 문장으로 답하세요.');
+  await page.getByRole('button',{name:'질문하기',exact:true}).click();
+  await page.locator('#answer-section').waitFor({timeout:40000});
+  check((await page.locator('#answer').textContent()).length>0,'missing live answer');
+  check((await page.locator('#review-source').textContent()).includes(original),'missing captured source');
+  check(await page.getByRole('textbox',{name:'문서 내용 (직접 변경 가능)',exact:true}).inputValue()===original,'read-only request mutated document');
+  await page.getByRole('combobox',{name:'작업',exact:true}).selectOption('summarize');
+  await page.getByRole('button',{name:'문서 텍스트 읽기',exact:true}).click();
+  await page.getByRole('button',{name:'요약하기',exact:true}).click();
+  await page.locator('#answer-section').waitFor({timeout:40000});
+  check((await page.locator('#history-count').textContent()).startsWith('2 / 20'),'history missing two live results');
+  const report=await page.locator('#report').inputValue();
+  check(!report.includes('모의 답변, 실제 분석 아님'),'live output mislabelled');
+  check(!report.includes('synthetic-live-model-pairing-code'),'credential leaked');
+  const downloadPromise=page.waitForEvent('download');
+  await page.getByRole('button',{name:'보고서 내려받기 (.txt)',exact:true}).click();
+  const download=await downloadPromise;
+  check(download.suggestedFilename()==='workbench-report.txt','report download failed');
+  await page.getByRole('combobox',{name:'작업',exact:true}).selectOption('replace_text');
+  await page.getByRole('button',{name:'선택 개체 읽기',exact:true}).click();
+  await page.getByRole('textbox',{name:'어떻게 다듬을까요?',exact:true}).fill('뜻을 유지하고 한국어 한 문장 한 줄로 다듬으세요.');
+  await page.getByRole('button',{name:'수정안 요청',exact:true}).click();
+  await page.locator('#proposal-section').waitFor({timeout:40000});
+  const proposed=await page.locator('#proposal').inputValue();
+  await page.getByRole('button',{name:'원래 개체에 적용',exact:true}).click();
+  check(await page.getByRole('textbox',{name:'문서 내용 (직접 변경 가능)',exact:true}).inputValue()===proposed,'mock editor apply mismatch');
+  return {passed:true,liveInference:true,readOnlyHistory:2,reportDownloaded:true,mockEditorApply:true,desktopEngine:false};
+}
