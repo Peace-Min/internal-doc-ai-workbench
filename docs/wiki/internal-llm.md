@@ -105,6 +105,10 @@ npm start
 
 모든 요청은 비스트리밍이다. `max_tokens` 기본값 2048, 허용 범위 1~8192이며 요청 제한 시간은 30초다. 실제 모델의 지원 한도는 별도로 확인한다. 끝나지 않은 응답, tool call, 잘못된 JSON, 과도한 응답, 여러 줄 또는 빈 수정안은 문서에 적용하지 않는다. thinking 블록은 문서에 포함하지 않는다. 임의 코드·도구 실행 기능은 없다.
 
+0.3.4부터 `WB_LLM_MAX_TOKENS`를 Anthropic Messages와 OpenAI 호환 chat/completions 양쪽에 `max_tokens`로 전달한다. 이전 OpenAI 경로에서는 설정값이 요청에 포함되지 않았다. 이는 서버에 요청하는 토큰 상한이며 문자 수 제한(수정안 12,000자), 응답 본문 크기 제한(64KiB)과는 별개다. `finish_reason: length` 또는 `stop_reason: max_tokens`로 중단된 응답은 수정안으로 반환하지 않는다.
+
+실제 사내 게이트웨이가 `max_tokens`를 받고 준수하는지 확인해야 한다. 확인한 [vLLM v0.11.0 요청 정의](https://github.com/vllm-project/vllm/blob/v0.11.0/vllm/entrypoints/openai/protocol.py#L394-L407)는 `max_tokens`를 허용하면서 `max_completion_tokens`를 대체 필드로 표시한다. 이는 사내 버전이나 지원 모델 확인을 대신하지 않는다. `max_completion_tokens`만 허용하는 게이트웨이는 현재 어댑터의 지원 범위가 아니며 규격에 맞춘 추가 변경이 필요하다. 이번 검증은 [토큰 제한 QA](../qa/2026-10-19-token-limit.md)를 참고한다.
+
 ## QA 범위
 
 백그라운드 Node 테스트에서 실제 loopback HTTP로 요청 형식·인증·정상 응답·timeout·redirect·잘못된 응답을 검증했다. 원본 로컬 설정 파일의 dry-run도 통과했지만 실제 사내 게이트웨이 요청은 아직 보내지 않았다. 사용자 PC의 화면을 점유하는 QA는 하지 않는다.

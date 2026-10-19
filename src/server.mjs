@@ -46,7 +46,7 @@ export function createWorkbenchServer(options = {}) {
     if (pathname.startsWith('/api/')) {
       const supplied = Buffer.from(req.headers.authorization || '');
       if (supplied.length !== expectedToken.length || !timingSafeEqual(supplied, expectedToken)) return send(401, { error: '연결 코드를 확인하세요.' });
-      if (req.method === 'GET' && pathname === '/api/health') return send(200, { mode, version: '0.3.3' });
+      if (req.method === 'GET' && pathname === '/api/health') return send(200, { mode, version: '0.3.4' });
       if (req.method !== 'POST' || pathname !== '/api/propose') return send(404, { error: '지원하지 않는 경로입니다.' });
       if (!/^application\/json(?:;|$)/i.test(req.headers['content-type'] || '')) return send(415, { error: 'JSON 요청만 지원합니다.' });
       try {

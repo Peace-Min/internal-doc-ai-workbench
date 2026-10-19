@@ -57,12 +57,13 @@ test('OpenAI adapter sends only validated text/instruction; key stays upstream',
     const data = await (await request('/api/propose', {...input, injectedTarget: 'ignored'})).json();
     assert.equal(data.proposedText, '보완된 합성 문장'); assert.equal(JSON.stringify(data).includes('synthetic-upstream-key'), false);
     const body = JSON.parse(sent.body); assert.equal(body.model, 'synthetic-model');
+    assert.equal(body.max_tokens, 2048);
     assert.deepEqual(JSON.parse(body.messages[1].content), {instruction: input.instruction, document: input.text});
     assert.equal(sent.redirect, 'error');
   });
 });
 test('upstream errors and malformed/empty/multiline proposals never become successful edits', async () => {
-  for (const response of [new Response('secret-error', {status: 500}), new Response('{}'), new Response(JSON.stringify({choices:[{message:{content:'line1\nline2'}}]}))]) {
+  for (const response of [new Response('secret-error', {status: 500}), new Response('{}'), new Response(JSON.stringify({choices:[{message:{content:'line1\nline2'}}]})), new Response(JSON.stringify({choices:[{finish_reason:'length',message:{content:'중간에 끊긴 합성 문장'}}]}))]) {
     await withServer({mode:'openai-compatible',llmUrl:'http://llm.example.invalid/v1/chat/completions',model:'test',fetch:async()=>response}, async request => {
       const result = await request('/api/propose', input); assert.ok(result.status >= 400);
       assert.equal((await result.text()).includes('secret-error'), false);

@@ -57,7 +57,7 @@ export function createLlmAdapter(options) {
     const userMessage = { role: 'user', content: JSON.stringify({ instruction: input.instruction, document: input.text }) };
     const body = mode === 'anthropic-compatible'
       ? { model: options.model, max_tokens: maxTokens, stream: false, system: systemPrompt, messages: [userMessage] }
-      : { model: options.model, stream: false, messages: [{ role: 'system', content: systemPrompt }, userMessage] };
+      : { model: options.model, max_tokens: maxTokens, stream: false, messages: [{ role: 'system', content: systemPrompt }, userMessage] };
     let response;
     try {
       response = await (options.fetch || fetch)(url, {
