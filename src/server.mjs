@@ -46,7 +46,7 @@ export function createWorkbenchServer(options = {}) {
     if (pathname.startsWith('/api/')) {
       const supplied = Buffer.from(req.headers.authorization || '');
       if (supplied.length !== expectedToken.length || !timingSafeEqual(supplied, expectedToken)) return send(401, { error: '연결 코드를 확인하세요.' });
-      if (req.method === 'GET' && pathname === '/api/health') return send(200, { mode, version: '0.3.4' });
+      if (req.method === 'GET' && pathname === '/api/health') return send(200, { mode, version: '0.4.0' });
       if (req.method !== 'POST' || pathname !== '/api/propose') return send(404, { error: '지원하지 않는 경로입니다.' });
       if (!/^application\/json(?:;|$)/i.test(req.headers['content-type'] || '')) return send(415, { error: 'JSON 요청만 지원합니다.' });
       try {
@@ -71,13 +71,35 @@ export function createWorkbenchServer(options = {}) {
   return server;
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const port = Number(process.env.WB_PORT || 4318);
+export async function prepareWorkbench(env = process.env) {
+  const port = Number(env.WB_PORT || 4318);
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('WB_PORT를 확인하세요.');
-  const token = process.env.WB_TOKEN || randomBytes(24).toString('hex');
-  const llmConfig = await loadLlmConfig();
-  const server = createWorkbenchServer({ ...llmConfig, token, origins: (process.env.WB_PLUGIN_ORIGINS || 'null,file://').split(',').map(s => s.trim()) });
-  await mkdir(path.join(root, 'private'), { recursive: true });
-  await writeFile(path.join(root, 'private/runtime.json'), JSON.stringify({ url: `http://127.0.0.1:${port}`, token }, null, 2), { mode: 0o600 });
-  server.listen(port, '127.0.0.1', () => console.log(`Local bridge: http://127.0.0.1:${port}/?demo=1\nPairing code: private/runtime.json\nMode: ${process.env.WB_MODE || 'mock'}`));
+  const token = env.WB_TOKEN || randomBytes(24).toString('hex');
+  const llmConfig = await loadLlmConfig(env);
+  const server = createWorkbenchServer({ ...llmConfig, token, origins: (env.WB_PLUGIN_ORIGINS || 'null,file://').split(',').map(s => s.trim()) });
+  return { server, port, token, mode: llmConfig.mode };
+}
+
+export async function startWorkbench(env = process.env, runtimeFile = path.join(root, 'private/runtime.json')) {
+  const instance = await prepareWorkbench(env);
+  const { server, port, token } = instance;
+  // Bind before publishing credentials so a duplicate launch cannot break the active service.
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(port, '127.0.0.1', () => { server.removeListener('error', reject); resolve(); });
+  });
+  const url = `http://127.0.0.1:${port}`;
+  try {
+    await mkdir(path.dirname(runtimeFile), { recursive: true });
+    await writeFile(runtimeFile, JSON.stringify({ url, token }, null, 2), { mode: 0o600 });
+  } catch (error) {
+    await new Promise(resolve => server.close(resolve));
+    throw error;
+  }
+  return { ...instance, url };
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const { url, mode } = await startWorkbench();
+  console.log(`Local bridge: ${url}/?demo=1\nPairing code: private/runtime.json\nMode: ${mode}`);
 }

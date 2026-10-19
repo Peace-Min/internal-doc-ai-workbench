@@ -1,5 +1,7 @@
 # PC 설치형 PoC 설치·실행
 
+0.4.0 런타임 포함 배포물은 압축 해제 후 Start-Workbench.cmd로 시작한다. 별도 Node 설치는 필요 없다. [처음 실행](../../FIRST-RUN.md)과 [배포 준비](portable-package.md)를 참고한다. 아래는 소스에서 직접 실행·편집기를 준비하는 방법이다.
+
 현재 범위는 ONLYOFFICE Desktop Editors용 PPTX 플러그인과 로컬 연동 서비스다. 별도의 통합 설치 프로그램은 아직 없다. Windows x64의 실제 10.0.0에서 개발 경로 설치와 단순 PPTX 기본 편집 흐름을 확인했다. `.plugin` UI 메뉴 설치 절차는 공식 문서에 근거하며 해당 경로 자체는 미검증이다.
 
 ## 1. 준비

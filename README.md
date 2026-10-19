@@ -2,7 +2,9 @@
 
 폐쇄망의 클라우디움 문서를 열어 편집하고, 사내 LLM으로 내용을 질의·요약·보완하는 문서 워크벤치.
 
-현재 상태: **PC 설치형 플러그인 PoC 0.3.4**. 실제 Desktop Editors의 단순 PPTX 기본 흐름을 확인했고, Anthropic/OpenAI 호환 LLM 어댑터·로컬 설정 읽기·비점유 연결 진단 CLI·편집 실패 원문 복구·서비스 포트 설정을 구현했다. 0.3.4는 OpenAI 호환 요청의 출력 토큰 제한 누락을 수정했다. 자동 테스트 42개 통과. 실제 엔진의 실패·롤백과 포트 설정 UI, 실제 사내 LLM·클라우디움·Marker 연결 및 완전한 폐쇄망 배포는 검증 전이다.
+현재 상태: **PC 설치형 플러그인 PoC 0.4.0**. Windows 실행기와 Node 런타임 포함 배포물을 제공한다. 자동 테스트 48개 통과. 실제 Desktop Editors의 단순 PPTX 기본 흐름은 이전 QA에서 확인했으며, 실제 엔진의 실패·롤백과 새 UI, 실제 사내 LLM·클라우디움·Marker 연결 및 완전한 폐쇄망 설치는 검증 전이다.
+
+Windows 배포물은 압축 해제 후 **Start-Workbench.cmd**로 실행한다. [처음 실행](FIRST-RUN.md), [배포물 준비와 검증](docs/wiki/portable-package.md)을 참고한다. 런타임 포함판은 Node 설치가 필요 없으며 ONLYOFFICE Desktop Editors는 별도로 준비한다.
 
 ## 목표
 
@@ -44,7 +46,7 @@ npm start
 npm run package
 ```
 
-`dist/`에 설치용 `.plugin`, 소스 ZIP, 체크섬을 생성한다. 편집기와 Node 런타임은 포함되지 않는다. [PC 설치와 실행](docs/wiki/desktop-setup.md), [실제 Desktop QA 결과](docs/qa/2026-10-18-desktop.md), [초기 모의 QA](docs/qa/2026-10-18-poc.md)를 참고한다.
+`dist/`에 설치용 `.plugin`, 소스 ZIP, Windows ZIP, 체크섬을 생성한다. 기본 빌드는 런타임을 포함하지 않는다. `--runtime-dir`에 고정 버전의 검증된 Node 배포 폴더를 지정하면 Windows ZIP에 런타임과 원본 고지를 포함한다. 편집기는 포함하지 않는다. [배포 준비](docs/wiki/portable-package.md), [PC 설치와 실행](docs/wiki/desktop-setup.md), [실제 Desktop QA 결과](docs/qa/2026-10-18-desktop.md)를 참고한다.
 
 ## 공개 저장소 원칙
 

@@ -4,6 +4,10 @@
 
 ## 작성 상태
 
+- [Windows 처음 실행](../../FIRST-RUN.md)
+- [실행·배포물 준비](portable-package.md)
+- [실행·배포 QA](../qa/2026-10-19-portable.md)
+
 로컬 서비스·모의 UI 실행과 실제 Windows Desktop 개발 설치·단순 PPTX QA 절차를 [PC 설치형 PoC 설치·실행](desktop-setup.md)에 기록했다. 실제 사내 연동과 전체 폐쇄망 검증은 구분해 남겨 두었다.
 
 - [고정 SDK 기술 조사](../06-desktop-api-research.md)

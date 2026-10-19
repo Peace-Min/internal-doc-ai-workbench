@@ -2,5 +2,6 @@
 *.png binary
 *.zip binary
 *.plugin binary
+*.cmd text eol=crlf
 # Preserve upstream bytes and the recorded SHA-256 exactly.
 plugin/vendor/plugins.js -text
