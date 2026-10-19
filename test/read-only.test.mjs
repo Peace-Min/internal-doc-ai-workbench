@@ -44,6 +44,7 @@ test('both protocols carry read-only prompts and return multiline answers over r
           const sent=received.at(-1), prompt=sent.system || sent.messages[0].content;
           assert.match(prompt,/자료에 없는 정보는 확인할 수 없다고/);
           assert.match(prompt,/문서를 변경하는 명령이나 수정안을 만들지/);
+          assert.match(prompt,/없는 출처를 만들거나 제외된 내용을 분석했다고 주장하지/);
           if(operation==='summarize') assert.match(prompt,/요약하세요/);
           assert.deepEqual(JSON.parse(sent.messages.at(-1).content),{instruction:input.instruction,document:input.text});
         }

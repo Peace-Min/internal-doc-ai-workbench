@@ -5,6 +5,7 @@
   const demo = new URLSearchParams(location.search).get("demo") === "1";
   let ready = false, connected = false, busy = false, target = null, controller = null, proposalOperation = null;
   $("operation").value = "replace_text";
+  $("scope").value = "selected";
   function clearResult() {
     proposalOperation = null;
     $("proposal-section").hidden = true; $("proposal").value = "";
@@ -18,7 +19,9 @@
     $("port").disabled = busy;
     $("token").disabled = busy;
     $("operation").disabled = busy;
-    $("apply").disabled = busy || !target || $("operation").value !== "replace_text" || proposalOperation !== "replace_text" || !$("proposal").value.trim();
+    $("scope").disabled = busy || $("operation").value === "replace_text";
+    $("capture").textContent = $("scope").value === "document" ? "문서 텍스트 읽기" : "선택 개체 읽기";
+    $("apply").disabled = busy || !target || $("operation").value !== "replace_text" || $("scope").value !== "selected" || proposalOperation !== "replace_text" || !$("proposal").value.trim();
     $("cancel").hidden = !busy || !controller;
   }
   async function api(path, body) {
@@ -37,7 +40,7 @@
   }
   function command(payload) {
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error("편집기 응답 시간이 초과되었습니다. 적용 여부를 문서에서 확인하세요.")), 15000);
+      const timer = setTimeout(() => reject(new Error(payload.action === "apply" ? "편집기 응답 시간이 초과되었습니다. 적용 여부를 문서에서 확인하세요." : "문서 읽기 시간이 초과되었습니다. 선택 개체로 범위를 줄여 다시 읽어 주세요.")), 15000);
       window.Asc.scope.workbenchPayload = payload;
       window.Asc.plugin.callCommand(window.workbenchEditorCommand, false, payload.action === "apply", function (result) {
         clearTimeout(timer);
@@ -46,7 +49,7 @@
       });
     });
   }
-  let capture = (readOnly) => command({ action: readOnly ? "inspect" : "capture" });
+  let capture = (readOnly, scope) => command({ action: readOnly && scope === "document" ? "inspect_document" : readOnly ? "inspect" : "capture" });
   let apply = (snapshot, text) => command({ action: "apply", target: snapshot, proposedText: text });
   if (demo) {
     const section = document.createElement("section");
@@ -57,7 +60,14 @@
     text.value = objects.one;
     select.onchange = () => { text.value = objects[select.value]; };
     text.oninput = () => { objects[select.value] = text.value; };
-    capture = async (readOnly) => {
+    capture = async (readOnly, scope) => {
+      if (readOnly && scope === "document") {
+        const sections = Object.values(objects).map((value, index) => ({ value, source: { slide: index + 1, object: 1, label: `[슬라이드 ${index + 1} · 개체 1]` } })).filter(section => section.value.trim());
+        if (!sections.length) throw new Error("분석할 일반 텍스트가 없습니다.");
+        const documentText = sections.map(section => `${section.source.label}\n${section.value}`).join("\n\n");
+        if (documentText.length > 12000) throw new Error("문서 텍스트가 출처 표기 포함 12,000자를 초과합니다. 내용을 자르지 않았습니다. 선택 개체 읽기를 이용해 주세요.");
+        return { scope: "document", readOnly: true, text: documentText, sources: sections.map(section => section.source), slideCount: 2, textObjectCount: sections.length, skippedObjectCount: 0, emptyObjectCount: 2 - sections.length };
+      }
       if (!readOnly && /[\r\n\u0000]/.test(objects[select.value])) throw new Error("수정은 한 문단만 지원합니다. 질의·요약 모드에서 읽어 주세요.");
       return { objectId: select.value, slideIndex: 0, text: objects[select.value], readOnly };
     };
@@ -94,27 +104,38 @@
   $("operation").onchange = () => {
     if (busy) return;
     target = null; clearResult(); $("instruction").value = "";
+    $("coverage").textContent = "";
     $("source").textContent = "작업을 바꿨습니다. 개체를 다시 읽어 주세요.";
     $("target").textContent = "텍스트 상자 한 개를 선택하세요.";
     const operation = $("operation").value;
+    if (operation === "replace_text") $("scope").value = "selected";
     $("instruction-label").textContent = operation === "ask" ? "읽은 내용에 대해 무엇이 궁금한가요?" : operation === "summarize" ? "요약 방향 (비워 두면 핵심 요약)" : "어떻게 다듬을까요?";
     $("instruction").placeholder = operation === "ask" ? "이 내용에서 확인할 수 있는 핵심 조건은 무엇인가요?" : operation === "summarize" ? "핵심 사실과 조건을 짧게 요약해 주세요." : "핵심을 유지하면서 보고용 문장으로 다듬어 주세요.";
     $("send").textContent = operation === "replace_text" ? "수정안 요청" : operation === "ask" ? "질문하기" : "요약하기";
     status("작업 대상을 다시 읽어 주세요. 질의·요약은 읽은 내용만 사용하며 문서를 변경하지 않습니다.");
     controls();
   };
+  $("scope").onchange = () => {
+    if (busy) return;
+    target = null; clearResult(); $("coverage").textContent = "";
+    $("source").textContent = "분석 범위를 바꿨습니다. 내용을 다시 읽어 주세요.";
+    $("target").textContent = "아직 읽은 내용이 없습니다.";
+    status("범위를 확인한 뒤 내용을 읽고, 전송할 텍스트와 제외 항목을 확인하세요.");
+    controls();
+  };
   $("capture").onclick = async () => {
     if (busy) return;
-    busy = true; target = null; clearResult(); controls();
+    busy = true; target = null; clearResult(); $("coverage").textContent = ""; controls();
     try {
       const operation = $("operation").value;
-      const snapshot = await capture(operation !== "replace_text");
+      const snapshot = await capture(operation !== "replace_text", $("scope").value);
       WorkbenchContract.validateRequest({ operation, text: snapshot.text, instruction: "capture" });
       target = Object.freeze(snapshot);
-      $("target").textContent = `슬라이드 ${snapshot.slideIndex + 1} · 개체 ${snapshot.objectId}`;
+      $("target").textContent = snapshot.scope === "document" ? `문서 ${snapshot.slideCount}슬라이드 · 텍스트 ${snapshot.textObjectCount}개` : `슬라이드 ${snapshot.slideIndex + 1} · 개체 ${snapshot.objectId}`;
+      $("coverage").textContent = snapshot.scope === "document" ? `제외 개체 ${snapshot.skippedObjectCount}개 · 빈 개체 ${snapshot.emptyObjectCount}개. 이미지·표·그룹·노트·마스터는 분석하지 않습니다. 출처 표기 포함 최대 12,000자이며 내용은 자동으로 자르지 않습니다.` : "선택한 텍스트 상자 한 개만 읽었습니다.";
       $("source").textContent = snapshot.text;
       status(operation === "replace_text" ? "요청 내용을 입력하세요. 텍스트 상자 전체를 대상으로 합니다." : "읽은 시점의 내용을 질의·요약합니다. 문서가 바뀌면 다시 읽어 주세요. 원문은 변경하지 않습니다.");
-    } catch (error) { $("source").textContent = "다시 선택해 주세요."; status(error.message, true); }
+    } catch (error) { $("source").textContent = "범위를 확인하고 다시 읽어 주세요."; $("target").textContent = "읽은 내용이 없습니다."; status(error.message, true); }
     finally { busy = false; controls(); }
   };
   $("request").onsubmit = async (event) => {
@@ -145,7 +166,7 @@
   $("cancel").onclick = () => controller?.abort();
   $("proposal").oninput = controls;
   $("apply").onclick = async () => {
-    if (busy || !target || $("operation").value !== "replace_text" || proposalOperation !== "replace_text" || target.readOnly) return;
+    if (busy || !target || $("operation").value !== "replace_text" || $("scope").value !== "selected" || proposalOperation !== "replace_text" || target.readOnly) return;
     busy = true; controls();
     try {
       const proposed = WorkbenchContract.validateProposal($("proposal").value);

@@ -9,6 +9,8 @@
 - [실행·배포 QA](../qa/2026-10-19-portable.md)
 - [선택 텍스트 질의·요약](read-only-ai.md)
 - [읽기 전용 AI QA](../qa/2026-10-19-read-only.md)
+- [문서 범위 질문·요약](document-ai.md)
+- [문서 범위 QA](../qa/2026-10-19-document.md)
 
 로컬 서비스·모의 UI 실행과 실제 Windows Desktop 개발 설치·단순 PPTX QA 절차를 [PC 설치형 PoC 설치·실행](desktop-setup.md)에 기록했다. 실제 사내 연동과 전체 폐쇄망 검증은 구분해 남겨 두었다.
 

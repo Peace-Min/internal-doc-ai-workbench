@@ -4,6 +4,54 @@ function workbenchEditorCommand() {
     var payload = Asc.scope.workbenchPayload;
     var presentation = Api.GetPresentation();
     if (!presentation) return { error: "PPTX 편집기에서 실행해 주세요." };
+    function readText(content) {
+      var paragraphs = content.GetAllParagraphs(), lines = [], length = 0;
+      if (paragraphs.length > 12000) return { error: "읽을 수 있는 내용은 12,000자 이하입니다." };
+      for (var p = 0; p < paragraphs.length; p++) {
+        var line = "", count = paragraphs[p].GetElementsCount();
+        if (count > 12000) return { error: "읽을 수 있는 내용은 12,000자 이하입니다." };
+        for (var e = 0; e < count; e++) {
+          var element = paragraphs[p].GetElement(e);
+          if (!element || element.GetClassType() !== "run") return { error: "질의·요약은 일반 텍스트로 이루어진 상자만 지원합니다.", unsupported: true };
+          var part = element.GetText();
+          if (typeof part !== "string" || /\u0000/.test(part)) return { error: "읽을 수 없는 텍스트 형식입니다." };
+          length += part.length;
+          if (length > 12000) return { error: "읽을 수 있는 내용은 12,000자 이하입니다." };
+          line += part;
+        }
+        if (p > 0) length++;
+        if (length > 12000) return { error: "읽을 수 있는 내용은 12,000자 이하입니다." };
+        lines.push(line);
+      }
+      return { text: lines.join("\n") };
+    }
+    if (payload.action === "inspect_document") {
+      var slides = presentation.GetAllSlides(), sections = [], sources = [], skipped = 0, empty = 0, scanned = 0, total = 0;
+      if (slides.length > 200) return { error: "문서 읽기는 최대 200슬라이드까지 지원합니다. 선택 개체 읽기를 이용해 주세요." };
+      for (var s = 0; s < slides.length; s++) {
+        var drawings = slides[s].GetAllDrawings();
+        scanned += drawings.length;
+        if (scanned > 2000) return { error: "문서 읽기는 최대 2,000개 개체까지 지원합니다. 선택 개체 읽기를 이용해 주세요." };
+        for (var d = 0; d < drawings.length; d++) {
+          var drawing = drawings[d];
+          if (!drawing || !drawing.GetClassType || drawing.GetClassType() !== "shape") { skipped++; continue; }
+          var drawingContent = drawing.GetContent();
+          if (!drawingContent) { empty++; continue; }
+          var extracted = readText(drawingContent);
+          if (extracted.unsupported) { skipped++; continue; }
+          if (extracted.error) return extracted;
+          if (!extracted.text.trim()) { empty++; continue; }
+          var label = "[슬라이드 " + (s + 1) + " · 개체 " + (d + 1) + "]";
+          var section = label + "\n" + extracted.text;
+          total += section.length + (sections.length ? 2 : 0);
+          if (total > 12000) return { error: "문서 텍스트가 출처 표기 포함 12,000자를 초과합니다. 내용을 자르지 않았습니다. 선택 개체 읽기를 이용해 주세요." };
+          sections.push(section);
+          sources.push({ slide: s + 1, object: d + 1, label: label });
+        }
+      }
+      if (!sections.length) return { error: "분석할 일반 텍스트가 없습니다. 이미지·표·그룹·노트·마스터는 분석하지 않습니다." };
+      return { scope: "document", readOnly: true, text: sections.join("\n\n"), sources: sources, slideCount: slides.length, textObjectCount: sources.length, skippedObjectCount: skipped, emptyObjectCount: empty };
+    }
     var shape;
     if (payload.action === "capture" || payload.action === "inspect") {
       var selection = Api.GetSelection();
@@ -12,7 +60,7 @@ function workbenchEditorCommand() {
       if (shapes.length !== 1) return { error: "텍스트 상자 한 개만 선택해 주세요." };
       shape = shapes[0];
     } else if (payload.action === "apply") {
-      if (payload.target.readOnly) return { error: "질의·요약용으로 읽은 내용은 문서에 적용할 수 없습니다. 수정 작업에서 다시 읽어 주세요." };
+      if (payload.target.readOnly || payload.target.scope === "document") return { error: "질의·요약용으로 읽은 내용은 문서에 적용할 수 없습니다. 수정 작업에서 다시 읽어 주세요." };
       var all = presentation.GetAllShapes();
       for (var i = 0; i < all.length; i++) {
         if (all[i].GetInternalId() === payload.target.objectId) { shape = all[i]; break; }
@@ -24,28 +72,10 @@ function workbenchEditorCommand() {
     if (!content) return { error: "텍스트가 없는 개체입니다." };
     var paragraphs = content.GetAllParagraphs();
     if (payload.action === "inspect") {
-      var lines = [], length = 0;
-      if (paragraphs.length > 12000) return { error: "읽을 수 있는 내용은 12,000자 이하입니다." };
-      for (var p = 0; p < paragraphs.length; p++) {
-        var line = "";
-        var count = paragraphs[p].GetElementsCount();
-        if (count > 12000) return { error: "읽을 수 있는 내용은 12,000자 이하입니다." };
-        for (var e = 0; e < count; e++) {
-          var element = paragraphs[p].GetElement(e);
-          if (!element || element.GetClassType() !== "run") return { error: "질의·요약은 일반 텍스트로 이루어진 상자만 지원합니다." };
-          var part = element.GetText();
-          if (typeof part !== "string" || /\u0000/.test(part)) return { error: "읽을 수 없는 텍스트 형식입니다." };
-          length += part.length;
-          if (length > 12000) return { error: "읽을 수 있는 내용은 12,000자 이하입니다." };
-          line += part;
-        }
-        if (p > 0) length++;
-        if (length > 12000) return { error: "읽을 수 있는 내용은 12,000자 이하입니다." };
-        lines.push(line);
-      }
-      var plainText = lines.join("\n");
-      if (!plainText.trim()) return { error: "읽을 텍스트가 없습니다." };
-      return { objectId: shape.GetInternalId(), slideIndex: presentation.GetCurSlideIndex(), text: plainText, readOnly: true };
+      var result = readText(content);
+      if (result.error) return result;
+      if (!result.text.trim()) return { error: "읽을 텍스트가 없습니다." };
+      return { objectId: shape.GetInternalId(), slideIndex: presentation.GetCurSlideIndex(), text: result.text, readOnly: true };
     }
     if (paragraphs.length !== 1) return { error: "한 문단의 텍스트 상자만 지원합니다. 문단 수: " + paragraphs.length };
     var run = null;

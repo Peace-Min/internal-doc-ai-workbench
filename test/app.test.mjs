@@ -10,7 +10,7 @@ const html = await readFile(new URL('../plugin/index.html', import.meta.url), 'u
 const token = 'synthetic-port-test-pairing-code';
 
 // Exercise the actual UI handlers without controlling a desktop app or browser.
-function panel(url, fetchImpl) {
+function panel(url, fetchImpl, documentError = false) {
   const elements = new Map([...html.matchAll(/id="([^"]+)"/g)].map(([, id]) => [id, { value: '', dataset: {}, disabled: false }]));
   const port = elements.get('port');
   port.value = html.match(/id="port"[^>]*value="([^"]+)"/)[1];
@@ -26,6 +26,7 @@ function panel(url, fetchImpl) {
       callCommand: (_command, _close, _recalculate, callback) => {
         const action = context.Asc.scope.workbenchPayload.action;
         commands.push(action);
+        if(action==='inspect_document') return callback(documentError ? {error:'문서 텍스트가 12,000자를 초과합니다.'} : {scope:'document',readOnly:true,slideCount:2,textObjectCount:2,skippedObjectCount:1,emptyObjectCount:0,sources:[{slide:1,object:1,label:'[슬라이드 1 · 개체 1]'}],text:'[슬라이드 1 · 개체 1]\n합성 내용\n\n[슬라이드 2 · 개체 1]\n다른 슬라이드'});
         callback(action === 'apply' ? { applied: true } : { objectId: 'one', slideIndex: 0, text: action === 'inspect' ? '합성 문장\n두 번째 문단' : '합성 문장', readOnly: action === 'inspect' });
       }
     } }
@@ -152,4 +153,44 @@ test('mismatched response operations cannot become applicable edits', async () =
   assert.match(ui.get('status').textContent,/요청과 다릅니다/);
   await ui.get('apply').onclick();
   assert.deepEqual(ui.commands,['capture']);
+});
+
+test('document scope sends labelled text, shows exclusions and resets scope before editing',async()=>{
+  let sent;
+  await withServer(async port=>{
+    const ui=panel('file:///synthetic/index.html',async(url,options)=>{
+      if(options.body)sent=JSON.parse(options.body);
+      return fetch(url,options);
+    });
+    ui.get('port').value=port;await ui.get('connect').onclick();
+    assert.equal(ui.get('scope').disabled,true);
+    ui.get('operation').value='summarize';ui.get('operation').onchange();
+    assert.equal(ui.get('scope').disabled,false);
+    ui.get('scope').value='document';ui.get('scope').onchange();
+    await ui.get('capture').onclick();
+    assert.match(ui.get('target').textContent,/2슬라이드/);
+    assert.match(ui.get('coverage').textContent,/제외 개체 1개/);
+    await ui.get('request').onsubmit({preventDefault(){}});
+    assert.match(sent.text,/슬라이드 1/);assert.match(sent.text,/슬라이드 2/);
+    assert.equal(ui.get('answer-section').hidden,false);assert.equal(ui.get('apply').disabled,true);
+    await ui.get('apply').onclick();assert.deepEqual(ui.commands,['inspect_document']);
+    ui.get('operation').value='replace_text';ui.get('operation').onchange();
+    assert.equal(ui.get('scope').value,'selected');assert.equal(ui.get('scope').disabled,true);
+    assert.equal(ui.get('send').disabled,true);assert.equal(ui.get('answer-section').hidden,true);
+    assert.equal(ui.get('coverage').textContent,'');
+  });
+});
+
+test('failed document capture clears previous source and cannot send partial content',async()=>{
+  let calls=0;
+  const ui=panel('file:///synthetic/index.html',async()=>{calls++;return new Response(JSON.stringify({mode:'mock'}));},true);
+  await ui.get('connect').onclick();await ui.get('capture').onclick();
+  ui.get('operation').value='ask';ui.get('operation').onchange();
+  ui.get('scope').value='document';ui.get('scope').onchange();
+  await ui.get('capture').onclick();
+  assert.match(ui.get('status').textContent,/12,000자/);
+  assert.equal(ui.get('target').textContent,'읽은 내용이 없습니다.');
+  assert.equal(ui.get('send').disabled,true);
+  await ui.get('request').onsubmit({preventDefault(){}});
+  assert.equal(calls,1);
 });
