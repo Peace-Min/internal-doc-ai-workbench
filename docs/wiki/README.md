@@ -13,6 +13,7 @@
 - [Anthropic 어댑터 QA](../qa/2026-10-18-anthropic.md)
 - [화면 제어 없는 LLM 진단 CLI QA](../qa/2026-10-18-diagnostics.md)
 - [편집 실패 원문 복구 QA](../qa/2026-10-19-recovery.md)
+- [로컬 서비스 포트 설정 QA](../qa/2026-10-19-port.md)
 
 ## 향후 문서
 

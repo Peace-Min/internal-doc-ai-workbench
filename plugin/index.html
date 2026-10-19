@@ -14,6 +14,8 @@
   <main>
     <header><span class="eyebrow">INTERNAL WORKBENCH</span><h1>문서와 대화하기</h1><p id="mode">편집기 연결을 기다리는 중입니다.</p></header>
     <details open id="connection"><summary>로컬 서비스 연결</summary>
+      <label for="port">서비스 포트</label><input id="port" type="number" min="1" max="65535" step="1" value="4318" aria-describedby="port-hint">
+      <p id="port-hint" class="hint">로컬 서비스 실행 포트와 같은 값을 입력하세요. 기본값은 4318입니다.</p>
       <label for="token">연결 코드</label><input id="token" type="password" autocomplete="off" placeholder="로컬 서비스의 연결 코드 입력">
       <button id="connect" class="secondary">연결 확인</button>
       <p class="hint">연결 코드는 이 창을 닫으면 사라집니다.</p>

@@ -1,7 +1,7 @@
 (function () {
   "use strict";
   const $ = (id) => document.getElementById(id);
-  const base = "http://127.0.0.1:4318";
+  if (location.protocol === "http:" && ["127.0.0.1", "localhost"].includes(location.hostname)) $("port").value = location.port || "80";
   const demo = new URLSearchParams(location.search).get("demo") === "1";
   let ready = false, connected = false, busy = false, target = null, controller = null;
   function status(message, error = false) { $("status").textContent = message; $("status").dataset.error = String(error); }
@@ -9,10 +9,15 @@
     $("capture").disabled = !ready || busy;
     $("send").disabled = !ready || !connected || !target || busy;
     $("connect").disabled = busy;
+    $("port").disabled = busy;
+    $("token").disabled = busy;
     $("apply").disabled = busy || !target || !$("proposal").value.trim();
-    $("cancel").hidden = !busy;
+    $("cancel").hidden = !busy || !controller;
   }
   async function api(path, body) {
+    const port = $("port").value.trim();
+    if (!/^[1-9][0-9]{0,4}$/.test(port) || Number(port) > 65535) throw new Error("서비스 포트는 1~65535의 정수로 입력하세요.");
+    const base = `http://127.0.0.1:${port}`;
     const response = await fetch(`${base}${path}`, {
       method: body ? "POST" : "GET",
       headers: { "Authorization": `Bearer ${$("token").value.trim()}`, ...(body ? { "Content-Type": "application/json" } : {}) },
@@ -64,16 +69,18 @@
     window.Asc.plugin.button = function () { window.Asc.plugin.executeCommand("close", ""); };
   }
   $("connect").onclick = async () => {
-    connected = false;
+    if (busy) return;
+    connected = false; busy = true; controls();
     try {
       const health = await api("/api/health");
       connected = true;
       status(health.mode === "mock" ? "모의 AI 연결 완료. 실제 LLM 응답이 아닙니다." : "사내 LLM 연동 서비스에 연결했습니다.");
       $("connection").open = false;
     } catch (error) { status(error.message, true); }
-    controls();
+    finally { busy = false; controls(); }
   };
   $("token").oninput = () => { connected = false; controls(); };
+  $("port").oninput = () => { connected = false; controls(); };
   $("capture").onclick = async () => {
     busy = true; target = null; $("proposal-section").hidden = true; $("proposal").value = ""; controls();
     try {
