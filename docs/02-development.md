@@ -37,6 +37,8 @@
 
 ## AI 변경 데이터 초안
 
+0.7.0 inspect_document는 선택적 정수 startSlide/endSlide를 받는다. 원본 Slides 배열에서 해당 구간의 GetAllDrawings만 호출하며 기존 텍스트 추출과 상한 검사를 재사용한다. 범위 머리말도 12,000자 한도에 포함한다. 외부 LLM 프로토콜은 변경하지 않고 범위가 표시된 텍스트를 기존 요청으로 보낸다.
+
 0.6.0 inspect_document는 GetAllSlides/GetAllDrawings와 공통 readText로 실제 슬라이드의 지원 텍스트를 모은다. 출처 표기와 집계를 반환하며 ask/summarize 요청은 기존 API를 재사용한다. 자동 분할·자동 요청·문서 쓰기를 하지 않는다. 초과 시 캡처를 거부하며 범위 변경 시 기존 캡처를 무효화한다.
 
 0.5.0의 실제 요청은 operation/text/instruction이며 operation은 replace_text, ask, summarize를 지원한다. 아래 변경 데이터는 설계 예시다. 질의·요약은 선택 개체의 일반 텍스트만 읽고 answer를 반환하며, 문서 변경 명령으로 변환하지 않는다. 여러 문단·run 읽기는 inspect에만 허용한다. 적용 명령과 수정안 형식은 기존 제한을 유지한다.

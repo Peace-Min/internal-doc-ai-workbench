@@ -27,8 +27,13 @@ function workbenchEditorCommand() {
     }
     if (payload.action === "inspect_document") {
       var slides = presentation.GetAllSlides(), sections = [], sources = [], skipped = 0, empty = 0, scanned = 0, total = 0;
-      if (slides.length > 200) return { error: "문서 읽기는 최대 200슬라이드까지 지원합니다. 선택 개체 읽기를 이용해 주세요." };
-      for (var s = 0; s < slides.length; s++) {
+      var first = payload.startSlide === undefined ? 1 : payload.startSlide;
+      var last = payload.endSlide === undefined ? slides.length : payload.endSlide;
+      if (!Number.isSafeInteger(first) || !Number.isSafeInteger(last) || first < 1 || last < first || last > slides.length) return { error: "실제 문서 안의 유효한 시작·끝 슬라이드를 지정하세요. 전체 슬라이드: " + slides.length };
+      if (last - first + 1 > 200) return { error: "한 번에 최대 200슬라이드까지 읽습니다. 시작·끝 슬라이드로 범위를 줄여 주세요." };
+      var rangeHeader = first > 1 || last < slides.length ? "[분석 범위: 슬라이드 " + first + "~" + last + " / 전체 " + slides.length + "]\n\n" : "";
+      total = rangeHeader.length;
+      for (var s = first - 1; s < last; s++) {
         var drawings = slides[s].GetAllDrawings();
         scanned += drawings.length;
         if (scanned > 2000) return { error: "문서 읽기는 최대 2,000개 개체까지 지원합니다. 선택 개체 읽기를 이용해 주세요." };
@@ -44,13 +49,13 @@ function workbenchEditorCommand() {
           var label = "[슬라이드 " + (s + 1) + " · 개체 " + (d + 1) + "]";
           var section = label + "\n" + extracted.text;
           total += section.length + (sections.length ? 2 : 0);
-          if (total > 12000) return { error: "문서 텍스트가 출처 표기 포함 12,000자를 초과합니다. 내용을 자르지 않았습니다. 선택 개체 읽기를 이용해 주세요." };
+          if (total > 12000) return { error: "문서 텍스트가 범위·출처 표기 포함 12,000자를 초과합니다. 내용을 자르지 않았습니다. 슬라이드 범위를 줄이거나 선택 개체 읽기를 이용해 주세요." };
           sections.push(section);
           sources.push({ slide: s + 1, object: d + 1, label: label });
         }
       }
       if (!sections.length) return { error: "분석할 일반 텍스트가 없습니다. 이미지·표·그룹·노트·마스터는 분석하지 않습니다." };
-      return { scope: "document", readOnly: true, text: sections.join("\n\n"), sources: sources, slideCount: slides.length, textObjectCount: sources.length, skippedObjectCount: skipped, emptyObjectCount: empty };
+      return { scope: "document", readOnly: true, text: rangeHeader + sections.join("\n\n"), sources: sources, slideCount: last - first + 1, documentSlideCount: slides.length, startSlide: first, endSlide: last, textObjectCount: sources.length, skippedObjectCount: skipped, emptyObjectCount: empty };
     }
     var shape;
     if (payload.action === "capture" || payload.action === "inspect") {

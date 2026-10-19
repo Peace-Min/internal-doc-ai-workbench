@@ -18,5 +18,16 @@
     if (typeof text !== "string" || !text.trim() || text.length > MAX_TEXT || /\u0000/u.test(text)) throw new Error("답변은 비어 있지 않은 12,000자 이하의 텍스트여야 합니다.");
     return text;
   }
-  root.WorkbenchContract = { MAX_TEXT, validateRequest, validateProposal, validateAnswer };
+  function validateSlideRange(start, end) {
+    function number(value) {
+      const text = String(value ?? "").trim();
+      if (!text) return undefined;
+      if (!/^[1-9][0-9]*$/.test(text) || !Number.isSafeInteger(Number(text))) throw new Error("슬라이드 번호는 1 이상의 정수로 입력하세요.");
+      return Number(text);
+    }
+    const startSlide = number(start), endSlide = number(end);
+    if (startSlide !== undefined && endSlide !== undefined && startSlide > endSlide) throw new Error("시작 슬라이드는 끝 슬라이드보다 클 수 없습니다.");
+    return { startSlide, endSlide };
+  }
+  root.WorkbenchContract = { MAX_TEXT, validateRequest, validateProposal, validateAnswer, validateSlideRange };
 })(globalThis);

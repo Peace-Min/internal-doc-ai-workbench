@@ -16,7 +16,7 @@ function panel(url, fetchImpl, documentError = false) {
   port.value = html.match(/id="port"[^>]*value="([^"]+)"/)[1];
   elements.get('token').value = token;
   elements.get('instruction').value = '합성 문장 보완';
-  const calls = [], commands = [];
+  const calls = [], commands = [], payloads = [];
   const context = vm.createContext({
     location: new URL(url), URLSearchParams, AbortController, AbortSignal, setTimeout, clearTimeout,
     document: { getElementById: id => elements.get(id) },
@@ -26,6 +26,7 @@ function panel(url, fetchImpl, documentError = false) {
       callCommand: (_command, _close, _recalculate, callback) => {
         const action = context.Asc.scope.workbenchPayload.action;
         commands.push(action);
+        payloads.push({...context.Asc.scope.workbenchPayload});
         if(action==='inspect_document') return callback(documentError ? {error:'문서 텍스트가 12,000자를 초과합니다.'} : {scope:'document',readOnly:true,slideCount:2,textObjectCount:2,skippedObjectCount:1,emptyObjectCount:0,sources:[{slide:1,object:1,label:'[슬라이드 1 · 개체 1]'}],text:'[슬라이드 1 · 개체 1]\n합성 내용\n\n[슬라이드 2 · 개체 1]\n다른 슬라이드'});
         callback(action === 'apply' ? { applied: true } : { objectId: 'one', slideIndex: 0, text: action === 'inspect' ? '합성 문장\n두 번째 문단' : '합성 문장', readOnly: action === 'inspect' });
       }
@@ -35,7 +36,7 @@ function panel(url, fetchImpl, documentError = false) {
   vm.runInContext(contract, context);
   vm.runInContext(app, context);
   context.Asc.plugin.init();
-  return { get: id => elements.get(id), calls, commands };
+  return { get: id => elements.get(id), calls, commands, payloads };
 }
 
 async function withServer(run) {
@@ -193,4 +194,35 @@ test('failed document capture clears previous source and cannot send partial con
   assert.equal(ui.get('send').disabled,true);
   await ui.get('request').onsubmit({preventDefault(){}});
   assert.equal(calls,1);
+});
+
+test('range inputs are passed to the editor and invalidate captured data and answers',async()=>{
+  await withServer(async port=>{
+    const ui=panel('file:///synthetic/index.html',fetch);
+    ui.get('port').value=port;await ui.get('connect').onclick();
+    ui.get('operation').value='summarize';ui.get('operation').onchange();
+    ui.get('scope').value='document';ui.get('scope').onchange();
+    assert.equal(ui.get('slide-range').hidden,false);
+    ui.get('slide-start').value='2';ui.get('slide-end').value='2';ui.get('slide-start').oninput();
+    await ui.get('capture').onclick();
+    assert.equal(ui.payloads.at(-1).startSlide,2);assert.equal(ui.payloads.at(-1).endSlide,2);
+    await ui.get('request').onsubmit({preventDefault(){}});
+    assert.equal(ui.get('answer-section').hidden,false);
+    ui.get('slide-end').value='3';ui.get('slide-end').oninput();
+    assert.equal(ui.get('answer-section').hidden,true);assert.equal(ui.get('send').disabled,true);
+    const count=ui.commands.length;ui.get('slide-start').value='1.5';
+    await ui.get('capture').onclick();assert.equal(ui.commands.length,count);
+    assert.match(ui.get('status').textContent,/정수/);
+  });
+});
+
+test('range fields lock while a model request is pending',async()=>{
+  let finish;
+  const ui=panel('file:///synthetic/index.html',async url=>String(url).endsWith('/api/health')?new Response(JSON.stringify({mode:'mock'})):new Promise(resolve=>{finish=resolve;}));
+  await ui.get('connect').onclick();ui.get('operation').value='summarize';ui.get('operation').onchange();
+  ui.get('scope').value='document';ui.get('scope').onchange();await ui.get('capture').onclick();
+  const sending=ui.get('request').onsubmit({preventDefault(){}});
+  assert.equal(ui.get('slide-start').disabled,true);assert.equal(ui.get('slide-end').disabled,true);
+  finish(new Response(JSON.stringify({operation:'summarize',answer:'모의 구간 답변',mode:'mock'})));await sending;
+  assert.equal(ui.get('slide-start').disabled,false);assert.equal(ui.get('slide-end').disabled,false);
 });

@@ -1,5 +1,5 @@
 {
-  "poc": "0.6.0",
+  "poc": "0.7.0",
   "portableNode": {
     "version": "24.22.0",
     "platform": "win-x64",

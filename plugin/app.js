@@ -6,6 +6,7 @@
   let ready = false, connected = false, busy = false, target = null, controller = null, proposalOperation = null;
   $("operation").value = "replace_text";
   $("scope").value = "selected";
+  $("slide-start").value = ""; $("slide-end").value = "";
   function clearResult() {
     proposalOperation = null;
     $("proposal-section").hidden = true; $("proposal").value = "";
@@ -20,6 +21,8 @@
     $("token").disabled = busy;
     $("operation").disabled = busy;
     $("scope").disabled = busy || $("operation").value === "replace_text";
+    $("slide-range").hidden = $("scope").value !== "document";
+    $("slide-start").disabled = busy; $("slide-end").disabled = busy;
     $("capture").textContent = $("scope").value === "document" ? "문서 텍스트 읽기" : "선택 개체 읽기";
     $("apply").disabled = busy || !target || $("operation").value !== "replace_text" || $("scope").value !== "selected" || proposalOperation !== "replace_text" || !$("proposal").value.trim();
     $("cancel").hidden = !busy || !controller;
@@ -49,7 +52,7 @@
       });
     });
   }
-  let capture = (readOnly, scope) => command({ action: readOnly && scope === "document" ? "inspect_document" : readOnly ? "inspect" : "capture" });
+  let capture = (readOnly, scope, range) => command({ action: readOnly && scope === "document" ? "inspect_document" : readOnly ? "inspect" : "capture", ...range });
   let apply = (snapshot, text) => command({ action: "apply", target: snapshot, proposedText: text });
   if (demo) {
     const section = document.createElement("section");
@@ -60,13 +63,16 @@
     text.value = objects.one;
     select.onchange = () => { text.value = objects[select.value]; };
     text.oninput = () => { objects[select.value] = text.value; };
-    capture = async (readOnly, scope) => {
+    capture = async (readOnly, scope, range) => {
       if (readOnly && scope === "document") {
-        const sections = Object.values(objects).map((value, index) => ({ value, source: { slide: index + 1, object: 1, label: `[슬라이드 ${index + 1} · 개체 1]` } })).filter(section => section.value.trim());
+        const first = range.startSlide ?? 1, last = range.endSlide ?? 2;
+        if (first < 1 || last < first || last > 2) throw new Error("실제 문서 안의 유효한 시작·끝 슬라이드를 지정하세요. 전체 슬라이드: 2");
+        const sections = Object.values(objects).map((value, index) => ({ value, source: { slide: index + 1, object: 1, label: `[슬라이드 ${index + 1} · 개체 1]` } })).filter(section => section.source.slide >= first && section.source.slide <= last && section.value.trim());
         if (!sections.length) throw new Error("분석할 일반 텍스트가 없습니다.");
-        const documentText = sections.map(section => `${section.source.label}\n${section.value}`).join("\n\n");
-        if (documentText.length > 12000) throw new Error("문서 텍스트가 출처 표기 포함 12,000자를 초과합니다. 내용을 자르지 않았습니다. 선택 개체 읽기를 이용해 주세요.");
-        return { scope: "document", readOnly: true, text: documentText, sources: sections.map(section => section.source), slideCount: 2, textObjectCount: sections.length, skippedObjectCount: 0, emptyObjectCount: 2 - sections.length };
+        const header = first > 1 || last < 2 ? `[분석 범위: 슬라이드 ${first}~${last} / 전체 2]\n\n` : "";
+        const documentText = header + sections.map(section => `${section.source.label}\n${section.value}`).join("\n\n");
+        if (documentText.length > 12000) throw new Error("문서 텍스트가 범위·출처 표기 포함 12,000자를 초과합니다. 내용을 자르지 않았습니다. 슬라이드 범위를 줄여 주세요.");
+        return { scope: "document", readOnly: true, text: documentText, sources: sections.map(section => section.source), slideCount: last - first + 1, documentSlideCount: 2, startSlide: first, endSlide: last, textObjectCount: sections.length, skippedObjectCount: 0, emptyObjectCount: last - first + 1 - sections.length };
       }
       if (!readOnly && /[\r\n\u0000]/.test(objects[select.value])) throw new Error("수정은 한 문단만 지원합니다. 질의·요약 모드에서 읽어 주세요.");
       return { objectId: select.value, slideIndex: 0, text: objects[select.value], readOnly };
@@ -123,16 +129,20 @@
     status("범위를 확인한 뒤 내용을 읽고, 전송할 텍스트와 제외 항목을 확인하세요.");
     controls();
   };
+  $("slide-start").oninput = $("scope").onchange;
+  $("slide-end").oninput = $("scope").onchange;
   $("capture").onclick = async () => {
     if (busy) return;
     busy = true; target = null; clearResult(); $("coverage").textContent = ""; controls();
     try {
       const operation = $("operation").value;
-      const snapshot = await capture(operation !== "replace_text", $("scope").value);
+      const range = $("scope").value === "document" ? WorkbenchContract.validateSlideRange($("slide-start").value, $("slide-end").value) : {};
+      const snapshot = await capture(operation !== "replace_text", $("scope").value, range);
       WorkbenchContract.validateRequest({ operation, text: snapshot.text, instruction: "capture" });
       target = Object.freeze(snapshot);
-      $("target").textContent = snapshot.scope === "document" ? `문서 ${snapshot.slideCount}슬라이드 · 텍스트 ${snapshot.textObjectCount}개` : `슬라이드 ${snapshot.slideIndex + 1} · 개체 ${snapshot.objectId}`;
-      $("coverage").textContent = snapshot.scope === "document" ? `제외 개체 ${snapshot.skippedObjectCount}개 · 빈 개체 ${snapshot.emptyObjectCount}개. 이미지·표·그룹·노트·마스터는 분석하지 않습니다. 출처 표기 포함 최대 12,000자이며 내용은 자동으로 자르지 않습니다.` : "선택한 텍스트 상자 한 개만 읽었습니다.";
+      $("target").textContent = snapshot.scope === "document" ? `읽은 ${snapshot.slideCount}슬라이드 · 텍스트 ${snapshot.textObjectCount}개` : `슬라이드 ${snapshot.slideIndex + 1} · 개체 ${snapshot.objectId}`;
+      if (snapshot.scope === "document" && snapshot.startSlide !== undefined) $("target").textContent += ` · 읽은 범위 ${snapshot.startSlide}~${snapshot.endSlide} / 전체 ${snapshot.documentSlideCount}슬라이드`;
+      $("coverage").textContent = snapshot.scope === "document" ? `제외 개체 ${snapshot.skippedObjectCount}개 · 빈 개체 ${snapshot.emptyObjectCount}개. 이미지·표·그룹·노트·마스터는 분석하지 않습니다. 범위·출처 표기 포함 최대 12,000자이며 내용은 자동으로 자르지 않습니다.` : "선택한 텍스트 상자 한 개만 읽었습니다.";
       $("source").textContent = snapshot.text;
       status(operation === "replace_text" ? "요청 내용을 입력하세요. 텍스트 상자 전체를 대상으로 합니다." : "읽은 시점의 내용을 질의·요약합니다. 문서가 바뀌면 다시 읽어 주세요. 원문은 변경하지 않습니다.");
     } catch (error) { $("source").textContent = "범위를 확인하고 다시 읽어 주세요."; $("target").textContent = "읽은 내용이 없습니다."; status(error.message, true); }
