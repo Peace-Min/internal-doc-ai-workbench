@@ -41,6 +41,34 @@ function panel(url, fetchImpl, documentError = false) {
   return { get: id => elements.get(id), calls, commands, payloads };
 }
 
+test('review retains captured source across mode changes and clears it with history', async () => {
+  const ui = panel('file:///synthetic/index.html', async url => new Response(JSON.stringify(String(url).endsWith('/api/health') ? {mode:'mock'} : {operation:'summarize',answer:'조건 [슬라이드 1 · 개체 1] / 범위 밖 [슬라이드 99 · 개체 1]\n<script>bad()</script>',mode:'mock'})));
+  await ui.get('connect').onclick();
+  ui.get('operation').value='summarize'; ui.get('operation').onchange();
+  ui.get('scope').value='document';ui.get('scope').onchange();await ui.get('capture').onclick();
+  const source=ui.get('source').textContent;
+  await ui.get('request').onsubmit({preventDefault(){}});
+  assert.equal(ui.get('review-source').textContent,source);
+  assert.match(ui.get('review-check').textContent,/읽은 출처에 있음 1개 · 읽은 출처에 없음 1개/);
+  assert.match(ui.get('review-answer').textContent,/<script>bad\(\)<\/script>/);
+  assert.doesNotMatch(ui.get('report').value,/합성 내용|다른 슬라이드/);
+  assert.match(ui.get('report').value,/미확인 출처: \[슬라이드 99 · 개체 1\]/);
+  ui.get('operation').value='ask';ui.get('operation').onchange();
+  ui.get('scope').value='selected';ui.get('scope').onchange();
+  await ui.get('capture').onclick();
+  assert.equal(ui.get('review-source').textContent,source);
+  for(const value of ['0','2','1e0','']){
+    ui.get('review-number').value=value;ui.get('review-open').onclick();
+    assert.equal(ui.get('review-section').hidden,true);assert.equal(ui.get('review-source').textContent,'');
+  }
+  ui.get('review-number').value='1';ui.get('review-open').onclick();
+  assert.equal(ui.get('review-source').textContent,source);
+  assert.deepEqual(ui.commands,['inspect_document','inspect']);
+  ui.get('clear-history').onclick();
+  assert.equal(ui.get('review-section').hidden,true);assert.equal(ui.get('review-source').textContent,'');
+  assert.equal(ui.get('review-answer').textContent,'');assert.equal(ui.get('review-open').disabled,true);
+});
+
 async function withServer(run) {
   const server = createWorkbenchServer({ token });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));

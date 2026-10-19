@@ -4,6 +4,10 @@
 
 ## 작성 상태
 
+- [기록별 원문·출처 대조](analysis-report.md)
+- [대조 기능 QA](../qa/2026-10-19-review.md)
+- [현재 PC 로컬 LLM 준비](local-llm.md)
+
 - [Windows 처음 실행](../../FIRST-RUN.md)
 - [실행·배포물 준비](portable-package.md)
 - [실행·배포 QA](../qa/2026-10-19-portable.md)

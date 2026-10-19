@@ -1,6 +1,14 @@
 (function () {
   "use strict";
   const MAX_RECORDS = 20;
+  function review(record) {
+    const labels = new Set(record.sources);
+    const cited = [...new Set([...record.answer.matchAll(/\[슬라이드\s+([1-9][0-9]*)\s*·\s*개체\s+([1-9][0-9]*)\]/g)].map(match => `[슬라이드 ${match[1]} · 개체 ${match[2]}]`))];
+    const known = cited.filter(label => labels.has(label));
+    const unknown = cited.filter(label => !labels.has(label));
+    const summary = labels.size === 0 ? "선택 개체 답변 · 슬라이드 출처 자동 대조 대상 아님" : cited.length === 0 ? "정형 출처 표기 없음 · 원문과 직접 대조 필요" : `출처 표기 ${cited.length}개 · 읽은 출처에 있음 ${known.length}개 · 읽은 출처에 없음 ${unknown.length}개`;
+    return { known, unknown, summary };
+  }
   function format(records) {
     return [
       "문서 질의·요약 보고서",
@@ -16,10 +24,12 @@
         `읽은 시각 (UTC): ${record.capturedAt}`,
         `범위 안내: ${record.coverage}`,
         `출처: ${record.sources.length ? record.sources.join(" · ") : "선택 개체, 문서 전체 아님"}`,
+        `출처 대조: ${review(record).summary}`,
+        `미확인 출처: ${review(record).unknown.join(" · ") || "없음 (내용의 사실성·인용 정확성 보장 아님)"}`,
         "\n질문·요청:", record.instruction,
         "\n답변:", record.answer
       ].join("\n"))
     ].join("\n");
   }
-  globalThis.WorkbenchReport = Object.freeze({ MAX_RECORDS, format });
+  globalThis.WorkbenchReport = Object.freeze({ MAX_RECORDS, format, review });
 })();

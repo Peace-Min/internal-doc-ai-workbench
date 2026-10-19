@@ -6,10 +6,20 @@
   let ready = false, connected = false, busy = false, target = null, controller = null, proposalOperation = null;
   const history = [];
   let capturedAt = "";
+  function renderReview(index) {
+    const record = history[index];
+    $("review-section").hidden = !record;
+    $("review-source").textContent = record ? record.sourceText : "";
+    $("review-answer").textContent = record ? record.answer : "";
+    $("review-meta").textContent = record ? `결과 ${index + 1} · ${record.mock ? "모의 답변" : "AI 답변"} · ${record.target} · 읽은 시각 ${record.capturedAt}\n질문·요청: ${record.instruction}` : "";
+    const result = record && WorkbenchReport.review(record);
+    $("review-check").textContent = result ? `${result.summary}${result.unknown.length ? "\n미확인: " + result.unknown.join(" · ") : ""}` : "";
+  }
   function renderHistory() {
     $("history-section").hidden = history.length === 0;
     $("history-count").textContent = `${history.length} / ${WorkbenchReport.MAX_RECORDS}건 · 구간별 답변 모음`;
     $("report").value = history.length ? WorkbenchReport.format(history) : "";
+    $("review-number").max = String(history.length);
   }
   $("operation").value = "replace_text";
   $("scope").value = "selected";
@@ -25,6 +35,8 @@
     $("send").disabled = !ready || !connected || !target || busy || ($("operation").value !== "replace_text" && history.length >= WorkbenchReport.MAX_RECORDS);
     $("export-report").disabled = busy || history.length === 0;
     $("clear-history").disabled = busy || history.length === 0;
+    $("review-open").disabled = busy || history.length === 0;
+    $("review-number").disabled = busy || history.length === 0;
     $("connect").disabled = busy;
     $("port").disabled = busy;
     $("token").disabled = busy;
@@ -172,7 +184,7 @@
     try {
       const instruction = operation === "summarize" && !$("instruction").value.trim() ? "핵심 사실과 조건을 간결하게 요약해 주세요." : $("instruction").value;
       const body = WorkbenchContract.validateRequest({ operation, text: target.text, instruction });
-      const provenance = { capturedAt, target: $("target").textContent, coverage: $("coverage").textContent, sources: (target.sources || []).map(source => source.label) };
+      const provenance = { capturedAt, target: $("target").textContent, coverage: $("coverage").textContent, sources: (target.sources || []).map(source => source.label), sourceText: target.text };
       const result = await api("/api/propose", body);
       if (result.operation !== operation) throw new Error("응답 작업이 요청과 다릅니다. 다시 요청해 주세요.");
       if (operation === "replace_text") {
@@ -184,6 +196,7 @@
         $("answer-section").hidden = false;
         history.push({ ...provenance, time: new Date().toISOString(), operation, instruction: body.instruction, answer: $("answer").textContent, mock: result.mode === "mock" });
         renderHistory();
+        $("review-number").value = String(history.length); renderReview(history.length - 1);
         status(result.mode === "mock" ? "모의 답변입니다. 실제 질의·요약 결과가 아닙니다." : "읽은 내용에 대한 답변입니다. 근거와 내용을 확인하세요. 문서는 변경하지 않았습니다.");
         if (history.length === WorkbenchReport.MAX_RECORDS) status("기록 20건을 채웠습니다. 보고서를 내려받고 기록을 지운 뒤 다음 질의·요약을 진행하세요.");
       }
@@ -191,9 +204,17 @@
     finally { clearTimeout(timeout); controller = null; busy = false; controls(); }
   };
   $("cancel").onclick = () => controller?.abort();
+  $("review-open").onclick = () => {
+    if (busy) return;
+    const value = $("review-number").value.trim();
+    if (!/^[1-9][0-9]*$/.test(value) || Number(value) > history.length) {
+      renderReview(-1); status("분석 기록에 있는 번호를 입력하세요.", true); return;
+    }
+    renderReview(Number(value) - 1);
+  };
   $("clear-history").onclick = () => {
     if (busy) return;
-    history.length = 0; renderHistory(); controls();
+    history.length = 0; renderHistory(); renderReview(-1); $("review-number").value = ""; controls();
     status("분석 기록을 지웠습니다. 이미 내려받은 파일은 유지됩니다.");
   };
   $("export-report").onclick = () => {
