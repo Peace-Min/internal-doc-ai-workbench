@@ -28,6 +28,11 @@ function panel(url, fetchImpl, documentError = false) {
         const action = context.Asc.scope.workbenchPayload.action;
         commands.push(action);
         payloads.push({...context.Asc.scope.workbenchPayload});
+        if(action==='page_capture') {
+          const segments=[{id:'s1',text:'원래 제목'},{id:'s2',text:'예산 950만원'}];
+          return callback({scope:'slide_edit',slideNumber:1,slideIndex:0,segments,excludedCount:1,emptyCount:0,text:JSON.stringify({slideNumber:1,segments})});
+        }
+        if(action==='page_apply')return callback({applied:true,changedSegments:2});
         if(action==='inspect_document') return callback(documentError ? {error:'문서 텍스트가 12,000자를 초과합니다.'} : {scope:'document',readOnly:true,slideCount:2,textObjectCount:2,skippedObjectCount:1,emptyObjectCount:0,sources:[{slide:1,object:1,label:'[슬라이드 1 · 개체 1]'}],text:'[슬라이드 1 · 개체 1]\n합성 내용\n\n[슬라이드 2 · 개체 1]\n다른 슬라이드'});
         callback(action === 'apply' ? { applied: true } : { objectId: 'one', slideIndex: 0, text: action === 'inspect' ? '합성 문장\n두 번째 문단' : '합성 문장', readOnly: action === 'inspect' });
       }
@@ -75,6 +80,33 @@ async function withServer(run) {
   const port = String(server.address().port);
   try { await run(port); } finally { await new Promise(resolve => server.close(resolve)); }
 }
+
+test('whole-slide UI requests one plan, previews all changes and applies only after review',async()=>{
+  await withServer(async port=>{
+    const ui=panel('file:///synthetic/index.html',fetch);ui.get('port').value=port;
+    await ui.get('connect').onclick();
+    ui.get('operation').value='rewrite_slide';ui.get('operation').onchange();
+    assert.equal(ui.get('scope').value,'slide_edit');assert.equal(ui.get('capture').textContent,'페이지 읽기');
+    await ui.get('capture').onclick();assert.match(ui.get('source').textContent,/원래 제목/);assert.match(ui.get('source').textContent,/950/);
+    ui.get('instruction').value='페이지 전체를 간결하게 보완';await ui.get('request').onsubmit({preventDefault(){}});
+    assert.equal(ui.get('page-proposal-section').hidden,false);assert.match(ui.get('page-diff').textContent,/변경 전: 원래 제목/);assert.match(ui.get('page-diff').textContent,/변경 후: \[모의 수정안\]/);
+    assert.equal(ui.get('page-apply').disabled,false);assert.deepEqual(ui.commands,['page_capture']);
+    await ui.get('page-apply').onclick();assert.deepEqual(ui.commands,['page_capture','page_apply']);
+    assert.equal(ui.get('page-proposal-section').hidden,true);assert.equal(ui.get('send').disabled,true);
+    assert.equal(ui.get('report').value,'');
+  });
+});
+
+test('invalid page plan cannot enable apply and a changed page number clears the proposal',async()=>{
+  let bad=false;
+  const ui=panel('file:///synthetic/index.html',async url=>new Response(JSON.stringify(String(url).endsWith('/api/health')?{mode:'mock'}:{operation:'rewrite_slide',mode:'mock',plan:{edits:[{id:'s1',text:'새 제목'},{id:bad?'s1':'s2',text:'예산 950 새 본문'}]}})));
+  await ui.get('connect').onclick();ui.get('operation').value='rewrite_slide';ui.get('operation').onchange();await ui.get('capture').onclick();ui.get('instruction').value='페이지 수정';
+  await ui.get('request').onsubmit({preventDefault(){}});assert.equal(ui.get('page-apply').disabled,false);
+  ui.get('page-number').value='2';ui.get('page-number').oninput();assert.equal(ui.get('page-apply').disabled,true);
+  await ui.get('page-apply').onclick();assert.deepEqual(ui.commands,['page_capture']);
+  await ui.get('capture').onclick();bad=true;await ui.get('request').onsubmit({preventDefault(){}});
+  assert.equal(ui.get('page-apply').disabled,true);assert.equal(ui.get('page-proposal-section').hidden,true);
+});
 
 test('installed panel defaults to 4318 and rejects invalid ports before sending credentials', async () => {
   const ui = panel('file:///synthetic/index.html', () => { throw new Error('unexpected network'); });

@@ -6,6 +6,7 @@
   let ready = false, connected = false, busy = false, target = null, controller = null, proposalOperation = null;
   const history = [];
   let capturedAt = "";
+  let pagePlan = null;
   function renderReview(index) {
     const record = history[index];
     $("review-section").hidden = !record;
@@ -25,6 +26,7 @@
   $("scope").value = "selected";
   $("slide-start").value = ""; $("slide-end").value = "";
   function clearResult() {
+    pagePlan = null; $("page-proposal-section").hidden = true; $("page-diff").textContent = "";
     proposalOperation = null;
     $("proposal-section").hidden = true; $("proposal").value = "";
     $("answer-section").hidden = true; $("answer").textContent = "";
@@ -32,7 +34,7 @@
   function status(message, error = false) { $("status").textContent = message; $("status").dataset.error = String(error); }
   function controls() {
     $("capture").disabled = !ready || busy;
-    $("send").disabled = !ready || !connected || !target || busy || ($("operation").value !== "replace_text" && history.length >= WorkbenchReport.MAX_RECORDS);
+    $("send").disabled = !ready || !connected || !target || busy || (["ask","summarize"].includes($("operation").value) && history.length >= WorkbenchReport.MAX_RECORDS);
     $("export-report").disabled = busy || history.length === 0;
     $("clear-history").disabled = busy || history.length === 0;
     $("review-open").disabled = busy || history.length === 0;
@@ -41,10 +43,14 @@
     $("port").disabled = busy;
     $("token").disabled = busy;
     $("operation").disabled = busy;
-    $("scope").disabled = busy || $("operation").value === "replace_text";
+    $("scope").disabled = busy || ["replace_text","rewrite_slide"].includes($("operation").value);
+    $("page-edit-settings").hidden = $("operation").value !== "rewrite_slide";
+    $("page-number").disabled = busy;
+    $("page-allow-numbers").disabled = busy;
+    $("page-apply").disabled = busy || !target || !pagePlan || $("operation").value !== "rewrite_slide" || !pagePlan.edits.some((edit,index)=>edit.text!==target.segments[index].text);
     $("slide-range").hidden = $("scope").value !== "document";
     $("slide-start").disabled = busy; $("slide-end").disabled = busy;
-    $("capture").textContent = $("scope").value === "document" ? "문서 텍스트 읽기" : "선택 개체 읽기";
+    $("capture").textContent = $("operation").value === "rewrite_slide" ? "페이지 읽기" : $("scope").value === "document" ? "문서 텍스트 읽기" : "선택 개체 읽기";
     $("apply").disabled = busy || !target || $("operation").value !== "replace_text" || $("scope").value !== "selected" || proposalOperation !== "replace_text" || !$("proposal").value.trim();
     $("cancel").hidden = !busy || !controller;
   }
@@ -64,9 +70,9 @@
   }
   function command(payload) {
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error(payload.action === "apply" ? "편집기 응답 시간이 초과되었습니다. 적용 여부를 문서에서 확인하세요." : "문서 읽기 시간이 초과되었습니다. 선택 개체로 범위를 줄여 다시 읽어 주세요.")), 15000);
+      const timer = setTimeout(() => reject(new Error(["apply","page_apply"].includes(payload.action) ? "편집기 응답 시간이 초과되었습니다. 적용 여부를 문서에서 확인하세요." : "문서 읽기 시간이 초과되었습니다. 범위를 줄여 다시 읽어 주세요.")), 15000);
       window.Asc.scope.workbenchPayload = payload;
-      window.Asc.plugin.callCommand(window.workbenchEditorCommand, false, payload.action === "apply", function (result) {
+      window.Asc.plugin.callCommand(payload.action.startsWith("page_") ? window.workbenchPageCommand : window.workbenchEditorCommand, false, ["apply","page_apply"].includes(payload.action), function (result) {
         clearTimeout(timer);
         if (!result || result.error) reject(new Error(result?.error || "편집기 응답이 없습니다."));
         else resolve(result);
@@ -75,6 +81,8 @@
   }
   let capture = (readOnly, scope, range) => command({ action: readOnly && scope === "document" ? "inspect_document" : readOnly ? "inspect" : "capture", ...range });
   let apply = (snapshot, text) => command({ action: "apply", target: snapshot, proposedText: text });
+  let capturePage = pageNumber => command({action:"page_capture",pageNumber,allowNumberChanges:$("page-allow-numbers").checked===true});
+  let applyPage = (snapshot,plan) => command({action:"page_apply",target:snapshot,plan});
   if (demo) {
     const section = document.createElement("section");
     section.innerHTML = '<h2>모의 편집기 · 실제 PPTX 아님</h2><label for="demo-object">선택 개체</label><select id="demo-object"><option value="one">본문 A</option><option value="two">본문 B</option></select><label for="demo-text">문서 내용 (직접 변경 가능)</label><textarea id="demo-text" rows="3"></textarea>';
@@ -84,6 +92,24 @@
     text.value = objects.one;
     select.onchange = () => { text.value = objects[select.value]; };
     text.oninput = () => { objects[select.value] = text.value; };
+    const pageTitles = ["문서 AI 활용", "편집 범위 확인"];
+    capturePage = async pageNumber => {
+      const number = pageNumber ?? (select.value === "one" ? 1 : 2);
+      if (![1,2].includes(number)) throw new Error("페이지 번호를 확인하세요. 모의 문서는 2페이지입니다.");
+      const segments = [{id:"s1",text:pageTitles[number-1]},{id:"s2",text:objects[number===1?"one":"two"]}];
+      const allowNumberChanges=$("page-allow-numbers").checked===true;
+      const snapshot = {scope:"slide_edit",slideNumber:number,slideIndex:number-1,allowNumberChanges,segments,excludedCount:0,emptyCount:0,text:JSON.stringify({slideNumber:number,allowNumberChanges,segments:segments.map((segment,index)=>({...segment,object:index+1,paragraph:1}))})};
+      WorkbenchContract.parseSlideDocument(snapshot.text); return snapshot;
+    };
+    applyPage = async (snapshot,plan) => {
+      const current = await capturePage(snapshot.slideNumber);
+      if (JSON.stringify(current)!==JSON.stringify(snapshot)) throw new Error("페이지 원문이 변경되었습니다. 다시 읽어 주세요.");
+      const valid = WorkbenchContract.validateSlidePlan(plan, WorkbenchContract.parseSlideDocument(snapshot.text));
+      pageTitles[snapshot.slideNumber-1] = valid.edits[0].text;
+      objects[snapshot.slideNumber===1?"one":"two"] = valid.edits[1].text;
+      text.value=objects[select.value];
+      return {applied:true,changedSegments:valid.edits.filter((edit,index)=>edit.text!==snapshot.segments[index].text).length};
+    };
     capture = async (readOnly, scope, range) => {
       if (readOnly && scope === "document") {
         const first = range.startSlide ?? 1, last = range.endSlide ?? 2;
@@ -136,10 +162,12 @@
     $("target").textContent = "텍스트 상자 한 개를 선택하세요.";
     const operation = $("operation").value;
     if (operation === "replace_text") $("scope").value = "selected";
+    else if (operation === "rewrite_slide") $("scope").value = "slide_edit";
+    else if ($("scope").value === "slide_edit") $("scope").value = "selected";
     $("instruction-label").textContent = operation === "ask" ? "읽은 내용에 대해 무엇이 궁금한가요?" : operation === "summarize" ? "요약 방향 (비워 두면 핵심 요약)" : "어떻게 다듬을까요?";
     $("instruction").placeholder = operation === "ask" ? "이 내용에서 확인할 수 있는 핵심 조건은 무엇인가요?" : operation === "summarize" ? "핵심 사실과 조건을 짧게 요약해 주세요." : "핵심을 유지하면서 보고용 문장으로 다듬어 주세요.";
-    $("send").textContent = operation === "replace_text" ? "수정안 요청" : operation === "ask" ? "질문하기" : "요약하기";
-    status("작업 대상을 다시 읽어 주세요. 질의·요약은 읽은 내용만 사용하며 문서를 변경하지 않습니다.");
+    $("send").textContent = operation === "rewrite_slide" ? "페이지 수정안 요청" : operation === "replace_text" ? "수정안 요청" : operation === "ask" ? "질문하기" : "요약하기";
+    status(operation === "rewrite_slide" ? "페이지를 읽은 뒤 전체 텍스트를 어떻게 수정할지 요청하세요. 검토 후 일괄 적용합니다." : "작업 대상을 다시 읽어 주세요. 질의·요약은 문서를 변경하지 않습니다.");
     controls();
   };
   $("scope").onchange = () => {
@@ -152,16 +180,24 @@
   };
   $("slide-start").oninput = $("scope").onchange;
   $("slide-end").oninput = $("scope").onchange;
+  $("page-number").oninput = $("scope").onchange;
+  $("page-allow-numbers").onchange = $("scope").onchange;
   $("capture").onclick = async () => {
     if (busy) return;
     busy = true; target = null; clearResult(); $("coverage").textContent = ""; controls();
     try {
       const operation = $("operation").value;
       const range = $("scope").value === "document" ? WorkbenchContract.validateSlideRange($("slide-start").value, $("slide-end").value) : {};
-      const snapshot = await capture(operation !== "replace_text", $("scope").value, range);
+      const snapshot = operation === "rewrite_slide" ? await capturePage(WorkbenchContract.validateSlideRange($("page-number").value, "").startSlide) : await capture(operation !== "replace_text", $("scope").value, range);
       WorkbenchContract.validateRequest({ operation, text: snapshot.text, instruction: "capture" });
       target = Object.freeze(snapshot);
       capturedAt = new Date().toISOString();
+      if (operation === "rewrite_slide") {
+        $("target").textContent = `페이지 ${snapshot.slideNumber} · 수정 가능한 텍스트 ${snapshot.segments.length}구간`;
+        $("coverage").textContent = `제외 개체 ${snapshot.excludedCount}개 · 빈 개체 ${snapshot.emptyCount}개. 여러 텍스트 상자·문단을 함께 수정하며 서식 구간을 유지합니다. 이미지·표·그룹·특수 필드는 수정하지 않습니다.`;
+        $("source").textContent = snapshot.segments.map((segment,index)=>`텍스트 ${index+1}\n${segment.text}`).join("\n\n");
+        status("페이지 전체 텍스트의 수정 방향을 입력하세요. 사실·수치와 문맥을 확인한 뒤 일괄 적용하세요."); return;
+      }
       $("target").textContent = snapshot.scope === "document" ? `읽은 ${snapshot.slideCount}슬라이드 · 텍스트 ${snapshot.textObjectCount}개` : `슬라이드 ${snapshot.slideIndex + 1} · 개체 ${snapshot.objectId}`;
       if (snapshot.scope === "document" && snapshot.startSlide !== undefined) $("target").textContent += ` · 읽은 범위 ${snapshot.startSlide}~${snapshot.endSlide} / 전체 ${snapshot.documentSlideCount}슬라이드`;
       $("coverage").textContent = snapshot.scope === "document" ? `제외 개체 ${snapshot.skippedObjectCount}개 · 빈 개체 ${snapshot.emptyObjectCount}개. 이미지·표·그룹·노트·마스터는 분석하지 않습니다. 범위·출처 표기 포함 최대 12,000자이며 내용은 자동으로 자르지 않습니다.` : "선택한 텍스트 상자 한 개만 읽었습니다.";
@@ -173,7 +209,7 @@
   $("request").onsubmit = async (event) => {
     event.preventDefault();
     if (busy || !target || !connected) return;
-    if ($("operation").value !== "replace_text" && history.length >= WorkbenchReport.MAX_RECORDS) {
+    if (["ask","summarize"].includes($("operation").value) && history.length >= WorkbenchReport.MAX_RECORDS) {
       status("기록이 20건입니다. 보고서를 내려받고 기록을 지운 뒤 계속하세요.", true); return;
     }
     clearResult();
@@ -187,7 +223,13 @@
       const provenance = { capturedAt, target: $("target").textContent, coverage: $("coverage").textContent, sources: (target.sources || []).map(source => source.label), sourceText: target.text };
       const result = await api("/api/propose", body);
       if (result.operation !== operation) throw new Error("응답 작업이 요청과 다릅니다. 다시 요청해 주세요.");
-      if (operation === "replace_text") {
+      if (operation === "rewrite_slide") {
+        pagePlan = WorkbenchContract.validateSlidePlan(result.plan,WorkbenchContract.parseSlideDocument(target.text));
+        const changes = pagePlan.edits.map((edit,index)=>({index,before:target.segments[index].text,after:edit.text})).filter(change=>change.before!==change.after);
+        $("page-diff").textContent = changes.length ? changes.map(change=>`텍스트 ${change.index+1}\n변경 전: ${change.before}\n변경 후: ${change.after}`).join("\n\n") : "변경 사항이 없습니다.";
+        $("page-proposal-section").hidden = false;
+        status(`${result.mode === "mock" ? "모의 페이지 수정안" : "페이지 수정안"} · 변경 ${changes.length}구간. 확인 후 페이지에 일괄 적용하세요.`);
+      } else if (operation === "replace_text") {
         $("proposal").value = WorkbenchContract.validateProposal(result.proposedText);
         proposalOperation = operation; $("proposal-section").hidden = false;
         status(result.mode === "mock" ? "모의 수정안입니다. 확인 후 적용하세요." : "수정안을 확인한 뒤 적용하세요.");
@@ -204,6 +246,17 @@
     finally { clearTimeout(timeout); controller = null; busy = false; controls(); }
   };
   $("cancel").onclick = () => controller?.abort();
+  $("page-apply").onclick = async () => {
+    if (busy || !target || !pagePlan || $("operation").value !== "rewrite_slide") return;
+    busy=true; controls();
+    try {
+      const plan=WorkbenchContract.validateSlidePlan(pagePlan,WorkbenchContract.parseSlideDocument(target.text));
+      const result=await applyPage(target,plan);
+      if (!result.applied) throw new Error("페이지 적용 결과를 확인할 수 없습니다.");
+      status(`페이지에 ${result.changedSegments}구간을 적용했습니다. 줄 넘침과 문맥을 확인하고 편집기에서 저장하세요. 다음 요청 전 페이지를 다시 읽어 주세요.`);
+    } catch(error) { status(error.message,true); }
+    finally { target=null;clearResult();busy=false;controls(); }
+  };
   $("review-open").onclick = () => {
     if (busy) return;
     const value = $("review-number").value.trim();

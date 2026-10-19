@@ -4,6 +4,9 @@
 
 ## 작성 상태
 
+- [PPTX 페이지 단위 수정](page-editing.md)
+- [페이지 수정 QA](../qa/2026-10-20-page-edit.md)
+
 - [Marker 추출과 할루시네이션 대리 지표 비교](marker-evaluation.md)
 - [실제 Marker 평가 QA](../qa/2026-10-20-marker.md)
 

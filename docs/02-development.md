@@ -1,5 +1,9 @@
 # 개발 설계 및 기술 검증
 
+## 0.12.0 페이지 수정 파이프라인
+
+rewrite_slide 요청의 60개 이하 구간·개체/문단 정보·전체 문맥을 두 LLM 어댑터에 전달한다. 모든 ID를 정확히 한 번 포함한 계획만 검증한다. page-command.js는 callCommand에서 독립 실행되며 페이지 캡처/전체 원문 충돌 검사/기존 run 쓰기/역순 복구를 수행한다. UI는 변경 전후를 textContent로 표시하고 명시 적용 전에는 문서를 변경하지 않는다. OpenAI 경로는 JSON schema 지원이 필요하다.
+
 ## 0.11.0 선택적 Marker 분석
 
 scripts/marker의 Python 추출기가 PDF 해시·페이지 번호·Marker Markdown 패킷을 만든다. marker-context.mjs는 200페이지·12,000자 한도와 출처를 검증한다. evaluate-grounding.mjs는 loopback 모델만 허용하고 짝지은 합성 평가의 전체 응답과 대리 지표를 저장한다. Python 의존성은 선택 사항이며 Node 앱의 기본 실행·테스트에는 추가하지 않는다. PDF 패널 UI 통합은 후속 단계다.

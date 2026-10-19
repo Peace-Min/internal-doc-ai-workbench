@@ -10,7 +10,7 @@ import '../plugin/contract.js';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const contract = globalThis.WorkbenchContract;
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.svg': 'image/svg+xml', '.md': 'text/plain; charset=utf-8' };
-const STATIC = new Set(['index.html', 'app.js', 'style.css', 'contract.js', 'report.js', 'editor-command.js', 'config.json', 'icon.svg', 'vendor/plugins.js', 'vendor/AGPL-3.0.txt', 'THIRD_PARTY_NOTICES.md', 'notices.html', 'LICENSE']);
+const STATIC = new Set(['index.html', 'app.js', 'style.css', 'contract.js', 'report.js', 'editor-command.js', 'page-command.js', 'config.json', 'icon.svg', 'vendor/plugins.js', 'vendor/AGPL-3.0.txt', 'THIRD_PARTY_NOTICES.md', 'notices.html', 'LICENSE']);
 
 async function readLimited(stream, limit = 65536) {
   const parts = []; let length = 0;
@@ -46,16 +46,19 @@ export function createWorkbenchServer(options = {}) {
     if (pathname.startsWith('/api/')) {
       const supplied = Buffer.from(req.headers.authorization || '');
       if (supplied.length !== expectedToken.length || !timingSafeEqual(supplied, expectedToken)) return send(401, { error: '연결 코드를 확인하세요.' });
-      if (req.method === 'GET' && pathname === '/api/health') return send(200, { mode, version: '0.11.0' });
+      if (req.method === 'GET' && pathname === '/api/health') return send(200, { mode, version: '0.12.0' });
       if (req.method !== 'POST' || pathname !== '/api/propose') return send(404, { error: '지원하지 않는 경로입니다.' });
       if (!/^application\/json(?:;|$)/i.test(req.headers['content-type'] || '')) return send(415, { error: 'JSON 요청만 지원합니다.' });
       try {
         const input = contract.validateRequest(JSON.parse(await readLimited(req)));
         const proposedText = await propose(input);
-        send(200, input.operation === 'replace_text'
+        send(200, input.operation === 'rewrite_slide'
+          ? {operation:input.operation,plan:contract.validateSlidePlan(proposedText,contract.parseSlideDocument(input.text)),mode}
+          : input.operation === 'replace_text'
           ? { operation: input.operation, proposedText: contract.validateProposal(proposedText), mode }
           : { operation: input.operation, answer: contract.validateAnswer(proposedText), mode });
       } catch (error) {
+        if(error.code==='SLIDE_NUMBERS_CHANGED')return send(502,{code:'SLIDE_NUMBERS_CHANGED',error:'모델이 페이지의 숫자를 누락·추가·변경하여 거부했습니다. 다시 요청하거나 숫자 변경 허용을 선택한 뒤 페이지를 다시 읽으세요.'});
         const upstreamError = ['TimeoutError', 'AbortError', 'TypeError'].includes(error.name);
         send(error.status || (upstreamError ? 502 : 400), { error: upstreamError ? 'LLM 연결 실패 또는 응답 시간 초과입니다.' : '요청 또는 수정안 형식이 올바르지 않습니다.' });
       }
