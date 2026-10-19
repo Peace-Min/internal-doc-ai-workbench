@@ -4,6 +4,9 @@
 
 ## 작성 상태
 
+- [Windows VM 준비·재개](windows-vm-qa.md)
+- [VM 준비 QA와 재부팅 대기 상태](../qa/2026-10-20-vm.md)
+
 - [PPTX 페이지 단위 수정](page-editing.md)
 - [페이지 수정 QA](../qa/2026-10-20-page-edit.md)
 

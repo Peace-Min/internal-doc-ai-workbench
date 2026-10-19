@@ -14,6 +14,8 @@ Windows 배포물은 압축 해제 후 **Start-Workbench.cmd**로 실행한다. 
 
 [페이지 단위 텍스트 수정](docs/wiki/page-editing.md)은 여러 개체·문단·서식 구간을 함께 다룬다. 새 기능의 실제 Desktop·저장 QA는 별도 환경에서 검증 전이며 PDF 페이지 편집·배치 변경은 미지원이다.
 
+[Windows VM 검증 환경](docs/wiki/windows-vm-qa.md)은 반입 패키지와 백그라운드 준비 스크립트를 추가한 상태다. 현재 PC의 Sandbox 기능 설치는 완료됐으나 재부팅 대기로 VM 첫 실행·실제 앱 QA는 미실행이다. VM 관련 검증을 포함한 현재 자동 테스트는 92개다.
+
 ## 목표
 
 - 기존 폐쇄망에 구축된 클라우디움과 사내 LLM을 활용한다.
