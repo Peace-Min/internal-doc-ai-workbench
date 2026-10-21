@@ -7,6 +7,7 @@
 - [Windows VM 준비·재개](windows-vm-qa.md)
 - [VM 내부 백그라운드 제어·재개](background-vm.md)
 - [Windows 오프라인 사용자 설치](offline-install.md)
+- [PDF 선택 텍스트 질문·요약 (실험적)](pdf-selection.md)
 - [최종 완료 기준과 외부 전제](../06-completion.md)
 - [백그라운드 VM 실제 실행 QA](../qa/2026-10-21-background-vm.md)
 - [VM 준비 QA와 재부팅 대기 상태](../qa/2026-10-20-vm.md)

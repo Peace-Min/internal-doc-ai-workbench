@@ -49,6 +49,8 @@ test('distribution includes launcher, plugin, source and notices without local s
       assert.ok(!/(?<!\r)\n/.test(entries.get('Start-Workbench.cmd').toString('utf8')), 'Windows launcher has CRLF line endings');
       const plugin = zipEntries(entries.get('internal-ai-workbench.plugin'));
       assert.ok(plugin.has('report.js'));
+      assert.ok(plugin.has('pdf-selection.js'));
+      assert.ok(plugin.get('index.html').toString('utf8').includes('src="pdf-selection.js"'));
     assert.ok(plugin.has('page-command.js'));
     assert.ok(plugin.get('index.html').toString('utf8').includes('src="page-command.js"'));
       assert.ok(plugin.get('index.html').toString('utf8').includes('src="report.js"'));

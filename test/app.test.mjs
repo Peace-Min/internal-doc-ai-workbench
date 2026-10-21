@@ -7,24 +7,33 @@ import { createWorkbenchServer } from '../src/server.mjs';
 const app = await readFile(new URL('../plugin/app.js', import.meta.url), 'utf8');
 const contract = await readFile(new URL('../plugin/contract.js', import.meta.url), 'utf8');
 const report = await readFile(new URL('../plugin/report.js', import.meta.url), 'utf8');
+const pdf = await readFile(new URL('../plugin/pdf-selection.js', import.meta.url), 'utf8');
 const html = await readFile(new URL('../plugin/index.html', import.meta.url), 'utf8');
 const token = 'synthetic-port-test-pairing-code';
 
 // Exercise the actual UI handlers without controlling a desktop app or browser.
-function panel(url, fetchImpl, documentError = false) {
+function panel(url, fetchImpl, documentError = false, options = {}) {
   const elements = new Map([...html.matchAll(/id="([^"]+)"/g)].map(([, id]) => [id, { value: '', dataset: {}, disabled: false }]));
   const port = elements.get('port');
   port.value = html.match(/id="port"[^>]*value="([^"]+)"/)[1];
   elements.get('token').value = token;
   elements.get('instruction').value = '합성 문장 보완';
-  const calls = [], commands = [], payloads = [];
+  const calls = [], commands = [], payloads = [], methods = [];
   const context = vm.createContext({
     location: new URL(url), URLSearchParams, AbortController, AbortSignal, setTimeout, clearTimeout,
     document: { getElementById: id => elements.get(id) },
     fetch: async (url, options) => { calls.push(String(url)); return fetchImpl(url, options); },
     Asc: { scope: {}, plugin: {
-      info: { editorType: 'slide' },
+      info: { editorType: options.editorType || 'slide' },
+      executeMethod: (method, args, callback) => {
+        methods.push(method);
+        assert.equal(method,'GetSelectedText');
+        assert.equal(args[0].Numbering,false);
+        if(options.pdfFailure) throw Error('Synthetic SDK failure');
+        callback(Object.hasOwn(options,'pdfText') ? options.pdfText : ' PDF Budget 950\nDelivery 2026. ');
+      },
       callCommand: (_command, _close, _recalculate, callback) => {
+        if(options.editorType==='pdf') throw Error('PPTX/write command called from PDF');
         const action = context.Asc.scope.workbenchPayload.action;
         commands.push(action);
         payloads.push({...context.Asc.scope.workbenchPayload});
@@ -41,10 +50,56 @@ function panel(url, fetchImpl, documentError = false) {
   context.window = context;
   vm.runInContext(contract, context);
   vm.runInContext(report, context);
+  vm.runInContext(pdf, context);
   vm.runInContext(app, context);
   context.Asc.plugin.init();
-  return { get: id => elements.get(id), calls, commands, payloads };
+  return { get: id => elements.get(id), calls, commands, payloads, methods };
 }
+
+test('PDF selected-text questions use the existing authenticated bridge without edit commands', async () => {
+  await withServer(async port => {
+    const ui=panel('file:///synthetic/index.html',fetch,false,{editorType:'pdf'});
+    assert.equal(ui.get('operation').value,'ask');assert.equal(ui.get('scope').disabled,true);
+    assert.equal(ui.get('pdf-note').hidden,false);
+    ui.get('port').value=port;await ui.get('connect').onclick();
+    await ui.get('capture').onclick();
+    assert.equal(ui.get('source').textContent,' PDF Budget 950\nDelivery 2026. ');
+    ui.get('instruction').value='예산과 일정을 알려 주세요.';
+    await ui.get('request').onsubmit({preventDefault(){}});
+    assert.match(ui.get('answer').textContent,/모의/);
+    assert.match(ui.get('report').value,/PDF 선택 텍스트, 전체 문서·페이지 범위 미확인/);
+    assert.doesNotMatch(ui.get('report').value,/PDF Budget 950/);
+    assert.equal(ui.get('review-source').textContent,ui.get('source').textContent);
+    ui.get('operation').value='summarize';ui.get('operation').onchange();
+    await ui.get('capture').onclick();await ui.get('request').onsubmit({preventDefault(){}});
+    assert.match(ui.get('answer').textContent,/모의/);
+    assert.equal(ui.get('apply').disabled,true);assert.equal(ui.get('page-apply').disabled,true);
+    await ui.get('apply').onclick();await ui.get('page-apply').onclick();
+    assert.deepEqual(ui.methods,['GetSelectedText','GetSelectedText']);assert.deepEqual(ui.commands,[]);
+  });
+});
+
+test('PDF rejects empty, nontext, NUL, overlong and failed SDK selections without sending partial input', async () => {
+  for(const options of [{pdfText:''},{pdfText:'   '},{pdfText:null},{pdfText:'x\0y'},{pdfText:'x'.repeat(12001)},{pdfFailure:true}]) {
+    const ui=panel('file:///synthetic/index.html',()=>{throw Error('No network expected')},false,{editorType:'pdf',...options});
+    await ui.get('capture').onclick();
+    assert.equal(ui.get('send').disabled,true);assert.equal(ui.get('status').dataset.error,'true');
+    assert.deepEqual(ui.calls,[]);assert.deepEqual(ui.commands,[]);
+  }
+});
+
+test('PDF forged edit operations or document scopes cannot reach editor writes or the bridge', async () => {
+  const ui=panel('file:///synthetic/index.html',async()=>new Response(JSON.stringify({mode:'mock'})),false,{editorType:'pdf'});
+  await ui.get('connect').onclick();await ui.get('capture').onclick();
+  for(const operation of ['replace_text','rewrite_slide']) {
+    ui.get('operation').value=operation;
+    await ui.get('request').onsubmit({preventDefault(){}});
+    await ui.get('apply').onclick();await ui.get('page-apply').onclick();await ui.get('capture').onclick();
+  }
+  ui.get('operation').value='ask';ui.get('scope').value='document';await ui.get('capture').onclick();
+  assert.deepEqual(ui.calls,['http://127.0.0.1:4318/api/health']);
+  assert.deepEqual(ui.methods,['GetSelectedText']);assert.deepEqual(ui.commands,[]);
+});
 
 test('review retains captured source across mode changes and clears it with history', async () => {
   const ui = panel('file:///synthetic/index.html', async url => new Response(JSON.stringify(String(url).endsWith('/api/health') ? {mode:'mock'} : {operation:'summarize',answer:'조건 [슬라이드 1 · 개체 1] / 범위 밖 [슬라이드 99 · 개체 1]\n<script>bad()</script>',mode:'mock'})));

@@ -11,7 +11,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const { version } = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const contract = globalThis.WorkbenchContract;
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.svg': 'image/svg+xml', '.md': 'text/plain; charset=utf-8' };
-const STATIC = new Set(['index.html', 'app.js', 'style.css', 'contract.js', 'report.js', 'editor-command.js', 'page-command.js', 'config.json', 'icon.svg', 'vendor/plugins.js', 'vendor/AGPL-3.0.txt', 'THIRD_PARTY_NOTICES.md', 'notices.html', 'LICENSE']);
+const STATIC = new Set(['index.html', 'app.js', 'style.css', 'contract.js', 'report.js', 'pdf-selection.js', 'editor-command.js', 'page-command.js', 'config.json', 'icon.svg', 'vendor/plugins.js', 'vendor/AGPL-3.0.txt', 'THIRD_PARTY_NOTICES.md', 'notices.html', 'LICENSE']);
 
 async function readLimited(stream, limit = 65536) {
   const parts = []; let length = 0;

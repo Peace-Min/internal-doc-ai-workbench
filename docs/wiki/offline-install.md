@@ -20,7 +20,7 @@ Windows ZIP을 작업 폴더에 해제한다. 열려 있는 ONLYOFFICE를 직접
 .\Install-Desktop.cmd -EditorZip 'D:\반입\DesktopEditors_x64.zip'
 ```
 
-기본 위치는 `%LOCALAPPDATA%\InternalDocAIWorkbench\0.13.0`이다. 다른 새 위치는 `-InstallDirectory 'D:\Workbench\0.13.0'`로 지정한다. 설치 원본 폴더의 안/상위나 기존 목적지는 거부하며 파일을 덮어쓰지 않는다. 편집기가 실행 중이면 강제 종료하지 않고 중단한다.
+기본 위치는 `%LOCALAPPDATA%\InternalDocAIWorkbench\<배포 버전>`이다. 다른 새 위치는 `-InstallDirectory 'D:\Workbench\0.14.0'`로 지정한다. 설치 원본 폴더의 안/상위나 기존 목적지는 거부하며 파일을 덮어쓰지 않는다. 편집기가 실행 중이면 강제 종료하지 않고 중단한다.
 
 실행 결과 `ok=true`와 `pluginInstalled=true`를 확인한다. 편집기 백업과 달리 기존 사용자 플러그인 백업은 `%LOCALAPPDATA%\InternalDocAIWorkbench\plugin-backups\<고유 ID>`에 남고 결과 JSON의 pluginBackup에 경로가 표시된다. 실패한 임시 설치 폴더는 진단을 위해 보존한다.
 

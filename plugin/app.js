@@ -7,6 +7,8 @@
   const history = [];
   let capturedAt = "";
   let pagePlan = null;
+  let pdfMode = false;
+  const readOnlyOperation = () => ["ask", "summarize"].includes($("operation").value);
   function renderReview(index) {
     const record = history[index];
     $("review-section").hidden = !record;
@@ -33,8 +35,8 @@
   }
   function status(message, error = false) { $("status").textContent = message; $("status").dataset.error = String(error); }
   function controls() {
-    $("capture").disabled = !ready || busy;
-    $("send").disabled = !ready || !connected || !target || busy || (["ask","summarize"].includes($("operation").value) && history.length >= WorkbenchReport.MAX_RECORDS);
+    $("capture").disabled = !ready || busy || (pdfMode && !readOnlyOperation());
+    $("send").disabled = !ready || !connected || !target || busy || (pdfMode && !readOnlyOperation()) || (["ask","summarize"].includes($("operation").value) && history.length >= WorkbenchReport.MAX_RECORDS);
     $("export-report").disabled = busy || history.length === 0;
     $("clear-history").disabled = busy || history.length === 0;
     $("review-open").disabled = busy || history.length === 0;
@@ -43,15 +45,15 @@
     $("port").disabled = busy;
     $("token").disabled = busy;
     $("operation").disabled = busy;
-    $("scope").disabled = busy || ["replace_text","rewrite_slide"].includes($("operation").value);
+    $("scope").disabled = pdfMode || busy || ["replace_text","rewrite_slide"].includes($("operation").value);
     $("page-edit-settings").hidden = $("operation").value !== "rewrite_slide";
     $("page-number").disabled = busy;
     $("page-allow-numbers").disabled = busy;
-    $("page-apply").disabled = busy || !target || !pagePlan || $("operation").value !== "rewrite_slide" || !pagePlan.edits.some((edit,index)=>edit.text!==target.segments[index].text);
+    $("page-apply").disabled = pdfMode || busy || !target || !pagePlan || $("operation").value !== "rewrite_slide" || !pagePlan.edits.some((edit,index)=>edit.text!==target.segments[index].text);
     $("slide-range").hidden = $("scope").value !== "document";
     $("slide-start").disabled = busy; $("slide-end").disabled = busy;
-    $("capture").textContent = $("operation").value === "rewrite_slide" ? "페이지 읽기" : $("scope").value === "document" ? "문서 텍스트 읽기" : "선택 개체 읽기";
-    $("apply").disabled = busy || !target || $("operation").value !== "replace_text" || $("scope").value !== "selected" || proposalOperation !== "replace_text" || !$("proposal").value.trim();
+    $("capture").textContent = pdfMode ? "PDF 선택 텍스트 읽기" : $("operation").value === "rewrite_slide" ? "페이지 읽기" : $("scope").value === "document" ? "문서 텍스트 읽기" : "선택 개체 읽기";
+    $("apply").disabled = pdfMode || busy || !target || $("operation").value !== "replace_text" || $("scope").value !== "selected" || proposalOperation !== "replace_text" || !$("proposal").value.trim();
     $("cancel").hidden = !busy || !controller;
   }
   async function api(path, body) {
@@ -135,8 +137,16 @@
     controls();
   } else {
     window.Asc.plugin.init = function () {
-      ready = window.Asc.plugin.info.editorType === "slide";
-      $("mode").textContent = ready ? "PPTX · 텍스트 보완과 질의·요약" : "PPTX 편집기에서 열어 주세요.";
+      pdfMode = window.Asc.plugin.info.editorType === "pdf";
+      ready = pdfMode || window.Asc.plugin.info.editorType === "slide";
+      $("mode").textContent = pdfMode ? "PDF · 선택 텍스트 질문·요약 (실험적)" : ready ? "PPTX · 텍스트 보완과 질의·요약" : "PPTX 또는 PDF 편집기에서 열어 주세요.";
+      for (const option of $("operation").options || []) option.disabled = pdfMode && !["ask","summarize"].includes(option.value);
+      $("pdf-note").hidden = !pdfMode;
+      $("pptx-operation-hint").hidden = pdfMode; $("pptx-scope-hint").hidden = pdfMode;
+      if (pdfMode) {
+        $("operation").value = "ask"; $("scope").value = "selected";
+        $("operation").onchange();
+      }
       controls();
     };
     window.Asc.plugin.button = function () { window.Asc.plugin.executeCommand("close", ""); };
@@ -161,7 +171,7 @@
     $("source").textContent = "작업을 바꿨습니다. 개체를 다시 읽어 주세요.";
     $("target").textContent = "텍스트 상자 한 개를 선택하세요.";
     const operation = $("operation").value;
-    if (operation === "replace_text") $("scope").value = "selected";
+    if (pdfMode || operation === "replace_text") $("scope").value = "selected";
     else if (operation === "rewrite_slide") $("scope").value = "slide_edit";
     else if ($("scope").value === "slide_edit") $("scope").value = "selected";
     $("instruction-label").textContent = operation === "ask" ? "읽은 내용에 대해 무엇이 궁금한가요?" : operation === "summarize" ? "요약 방향 (비워 두면 핵심 요약)" : "어떻게 다듬을까요?";
@@ -187,11 +197,18 @@
     busy = true; target = null; clearResult(); $("coverage").textContent = ""; controls();
     try {
       const operation = $("operation").value;
+      if (pdfMode && (!readOnlyOperation() || $("scope").value !== "selected")) throw new Error("PDF는 선택 텍스트의 질문·요약만 지원합니다. 작업과 범위를 다시 확인하세요.");
       const range = $("scope").value === "document" ? WorkbenchContract.validateSlideRange($("slide-start").value, $("slide-end").value) : {};
-      const snapshot = operation === "rewrite_slide" ? await capturePage(WorkbenchContract.validateSlideRange($("page-number").value, "").startSlide) : await capture(operation !== "replace_text", $("scope").value, range);
+      const snapshot = pdfMode ? await WorkbenchPdfSelection.capture(window.Asc.plugin) : operation === "rewrite_slide" ? await capturePage(WorkbenchContract.validateSlideRange($("page-number").value, "").startSlide) : await capture(operation !== "replace_text", $("scope").value, range);
       WorkbenchContract.validateRequest({ operation, text: snapshot.text, instruction: "capture" });
       target = Object.freeze(snapshot);
       capturedAt = new Date().toISOString();
+      if (pdfMode) {
+        $("target").textContent = "PDF · 읽은 시점의 선택 텍스트";
+        $("coverage").textContent = "직접 선택한 텍스트만 최대 12,000자까지 읽었습니다. 전체 PDF·페이지 범위·이미지·OCR은 포함하지 않습니다. 원문은 변경하지 않습니다.";
+        $("source").textContent = snapshot.text;
+        status("읽은 선택 텍스트를 확인한 뒤 질문·요약을 요청하세요. PDF 내용이나 선택이 바뀌면 다시 읽어 주세요."); return;
+      }
       if (operation === "rewrite_slide") {
         $("target").textContent = `페이지 ${snapshot.slideNumber} · 수정 가능한 텍스트 ${snapshot.segments.length}구간`;
         $("coverage").textContent = `제외 개체 ${snapshot.excludedCount}개 · 빈 개체 ${snapshot.emptyCount}개. 여러 텍스트 상자·문단을 함께 수정하며 서식 구간을 유지합니다. 이미지·표·그룹·특수 필드는 수정하지 않습니다.`;
@@ -209,6 +226,7 @@
   $("request").onsubmit = async (event) => {
     event.preventDefault();
     if (busy || !target || !connected) return;
+    if (pdfMode && (!readOnlyOperation() || target.kind !== "pdf_selection" || $("scope").value !== "selected")) { status("PDF는 읽기 전용 질문·요약만 지원합니다. 다시 읽어 주세요.", true); return; }
     if (["ask","summarize"].includes($("operation").value) && history.length >= WorkbenchReport.MAX_RECORDS) {
       status("기록이 20건입니다. 보고서를 내려받고 기록을 지운 뒤 계속하세요.", true); return;
     }
@@ -220,7 +238,7 @@
     try {
       const instruction = operation === "summarize" && !$("instruction").value.trim() ? "핵심 사실과 조건을 간결하게 요약해 주세요." : $("instruction").value;
       const body = WorkbenchContract.validateRequest({ operation, text: target.text, instruction });
-      const provenance = { capturedAt, target: $("target").textContent, coverage: $("coverage").textContent, sources: (target.sources || []).map(source => source.label), sourceText: target.text };
+      const provenance = { kind: target.kind, capturedAt, target: $("target").textContent, coverage: $("coverage").textContent, sources: (target.sources || []).map(source => source.label), sourceText: target.text };
       const result = await api("/api/propose", body);
       if (result.operation !== operation) throw new Error("응답 작업이 요청과 다릅니다. 다시 요청해 주세요.");
       if (operation === "rewrite_slide") {
@@ -247,7 +265,7 @@
   };
   $("cancel").onclick = () => controller?.abort();
   $("page-apply").onclick = async () => {
-    if (busy || !target || !pagePlan || $("operation").value !== "rewrite_slide") return;
+    if (pdfMode || busy || !target || !pagePlan || $("operation").value !== "rewrite_slide") return;
     busy=true; controls();
     try {
       const plan=WorkbenchContract.validateSlidePlan(pagePlan,WorkbenchContract.parseSlideDocument(target.text));
@@ -287,7 +305,7 @@
   };
   $("proposal").oninput = controls;
   $("apply").onclick = async () => {
-    if (busy || !target || $("operation").value !== "replace_text" || $("scope").value !== "selected" || proposalOperation !== "replace_text" || target.readOnly) return;
+    if (pdfMode || busy || !target || $("operation").value !== "replace_text" || $("scope").value !== "selected" || proposalOperation !== "replace_text" || target.readOnly) return;
     busy = true; controls();
     try {
       const proposed = WorkbenchContract.validateProposal($("proposal").value);

@@ -96,3 +96,7 @@ validateSlidePlan은 ID로 정규화한 각 구간의 숫자 토큰 배열을 �
 ## 사용자 설치기 (0.13.0)
 
 Install-Desktop.cmd는 Windows PowerShell 설치기를 실행한다. 프로젝트/편집기/Node를 새 사용자 목적지에 배치하고 이전 플러그인을 백업한 뒤 설치한다. 소스 화이트리스트로 .env/private를 제외한다. 설치 중간 파일과 기존 설치는 자동 삭제하지 않는다. Windows PowerShell Utility 모듈을 PSHOME에서 명시 로드해 다른 PowerShell의 모듈 환경을 상속한 호출에서도 Get-FileHash를 사용할 수 있게 했다. HTTP health는 package.json 버전을 한 번 읽어 응답하며 공개 static 경로는 확대하지 않는다.
+
+## PDF 선택 분석 후보 (0.14.0)
+
+pdf-selection.js는 GetSelectedText만 호출하고 15초·12,000자 한도와 실패를 처리한다. 공통 패널의 pdf 모드는 질문/요약만 허용하며 조작된 수정 작업도 핸들러에서 거부한다. PDF 기록의 kind를 보존해 슬라이드 출처와 혼동하지 않는다. 실제 Desktop 선택 API/패널 검증 전이므로 별도 PDF 변형에 실험적으로 표시했다.
