@@ -44,7 +44,7 @@ test('distribution includes launcher, plugin, source and notices without local s
     assert.ok(entries.has('LICENSE'));
     assert.ok(![...entries.keys()].some(name => name === '.env' || name.startsWith('private/') || name.includes('node_modules/')));
     if (name.endsWith('-windows.zip')) {
-      for (const required of ['FIRST-RUN.md', 'Start-Workbench.cmd', 'scripts/launch.mjs', 'internal-ai-workbench.plugin', '.env.example']) assert.ok(entries.has(required), required);
+      for (const required of ['FIRST-RUN.md', 'Start-Workbench.cmd', 'Install-Desktop.cmd', 'scripts/install-desktop.ps1', 'scripts/launch.mjs', 'internal-ai-workbench.plugin', '.env.example']) assert.ok(entries.has(required), required);
       assert.ok(!entries.has('runtime/node.exe'));
       assert.ok(!/(?<!\r)\n/.test(entries.get('Start-Workbench.cmd').toString('utf8')), 'Windows launcher has CRLF line endings');
       const plugin = zipEntries(entries.get('internal-ai-workbench.plugin'));

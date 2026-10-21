@@ -6,6 +6,8 @@
 
 ## 처음 실행
 
+편집기까지 사용자 폴더에 설치하려면 런타임 포함 ZIP을 해제하고 `Install-Desktop.cmd -EditorZip "반입한 DesktopEditors_x64.zip 경로"`를 실행한다. VC++ 런타임 사전 준비와 백업/실행은 [오프라인 설치](docs/wiki/offline-install.md)를 따른다. 설치 후 생성된 Start-Desktop.cmd는 서비스와 편집기를 함께 시작한다. 아래 Start-Workbench.cmd는 서비스만 실행하는 기존 방식이다.
+
 1. Windows ZIP 전체를 쓰기 가능한 폴더에 압축 해제한다. ZIP 안에서 직접 실행하지 않는다.
 2. `Start-Workbench.cmd`를 더블클릭한다. 런타임 포함판은 Node 설치가 필요 없다. 포함하지 않은 판은 Node.js 22.14.0 이상이 필요하다.
 3. `Workbench ready`가 표시되면 안내된 주소를 브라우저에서 직접 연다. 기본 주소는 `http://127.0.0.1:4318/?demo=1`이다.

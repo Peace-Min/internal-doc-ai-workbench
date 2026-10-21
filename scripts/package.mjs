@@ -35,7 +35,7 @@ await mkdir(destination, { recursive: true });
 const pluginFiles = await collect('plugin');
 await writeZip(path.join(destination, 'internal-ai-workbench.plugin'), [...pluginFiles.map(f => ({ ...f, name: f.name.slice(7) })), { name: 'LICENSE', data: await readFile(path.join(root, 'LICENSE')) }]);
 const sourceFiles = [...pluginFiles, ...await collect('src'), ...await collect('scripts'), ...await collect('docs'), ...await collect('test')];
-for (const name of ['package.json', 'versions.json', '.gitattributes', '.gitignore', '.env.example', 'README.md', 'FIRST-RUN.md', 'Start-Workbench.cmd', 'HANDOFF.md', 'AGENTS.md', 'LICENSE']) {
+for (const name of ['package.json', 'versions.json', '.gitattributes', '.gitignore', '.env.example', 'README.md', 'FIRST-RUN.md', 'Start-Workbench.cmd', 'Install-Desktop.cmd', 'HANDOFF.md', 'AGENTS.md', 'LICENSE']) {
   const data = await readFile(path.join(root, name));
   sourceFiles.push({ name, data: name.endsWith('.cmd') ? Buffer.from(data.toString('utf8').replace(/\r?\n/g, '\r\n')) : data });
 }

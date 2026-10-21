@@ -92,3 +92,7 @@ Start-WindowsSandbox.ps1 -Check는 Windows 기능·CLI·재부팅·반입 파일
 ## 구간별 숫자 검사 (0.12.1)
 
 validateSlidePlan은 ID로 정규화한 각 구간의 숫자 토큰 배열을 순서까지 비교한다. page-command.js는 외부 클로저가 없는 직렬화 명령이므로 같은 검사를 자체 수행하며 모든 쓰기 전에 거부한다. 오류 코드와 명시 허용은 유지했다.
+
+## 사용자 설치기 (0.13.0)
+
+Install-Desktop.cmd는 Windows PowerShell 설치기를 실행한다. 프로젝트/편집기/Node를 새 사용자 목적지에 배치하고 이전 플러그인을 백업한 뒤 설치한다. 소스 화이트리스트로 .env/private를 제외한다. 설치 중간 파일과 기존 설치는 자동 삭제하지 않는다. Windows PowerShell Utility 모듈을 PSHOME에서 명시 로드해 다른 PowerShell의 모듈 환경을 상속한 호출에서도 Get-FileHash를 사용할 수 있게 했다. HTTP health는 package.json 버전을 한 번 읽어 응답하며 공개 static 경로는 확대하지 않는다.

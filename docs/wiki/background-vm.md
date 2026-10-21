@@ -6,7 +6,7 @@
 
 - 게스트 UIA 조회, 합성 WinForms 입력란의 값 변경/재조회, 게스트 창 최소화/복원, 실제 편집기 합성 PPTX 열기와 화면 캡처.
 - 편집기는 `DesktopEditors.exe`가 실행한 **editors.exe** 프로세스를 조회한다. 실행기 PID만으로 준비 완료를 판단하지 않는다.
-- ONLYOFFICE의 UIA 트리는 창/문서 수준만 노출했다. 슬라이드 캔버스와 플러그인 조작은 추가 검증이 필요하다. 실제 수정·undo·저장은 아직 미실행이다.
+- ONLYOFFICE의 UIA 조회 깊이 8에서는 29개, 추가 깊이 25에서는 탭/버튼을 포함한 163개 요소가 보였다. 하지만 Plugins 선택 호출의 실제 변경은 확인하지 못했고 실제 입력은 no_interactive_desktop으로 거부됐다. 슬라이드 캔버스와 플러그인 수정·undo·저장은 아직 미실행이다.
 - 게스트 앱 최소화 시 시험 입력란이 UIA 트리에서 사라졌고, 복원 후 값 변경/조회에 성공했다. 호스트 Sandbox 클라이언트를 최소화한 상태의 동작은 별도로 검증하지 않았다.
 
 현재는 VM 창을 다른 창 뒤에 둔 채 작업할 수 있다. 클라이언트 최소화 상태의 모든 입력/캡처를 보장하지 않는다. Microsoft도 실제 입력/녹화에는 연결된 비최소화 클라이언트를 요구한다. 자동화 중 `wsb stop`이나 VM 종료는 하지 않는다. `wsb start`로 만든 VM은 클라이언트 창 닫기와 VM 종료가 다를 수 있으므로 생존 여부는 `wsb list --raw`로 판단한다.
@@ -44,7 +44,7 @@ wsb.exe exec --id $id -r ExistingLogin -c 'powershell.exe -NoProfile -ExecutionP
 조회 결과의 현재 PID 또는 HWND로 대상을 고정한다. 예전 VM/PID를 다음 실행에 복사하지 않는다.
 
 ```powershell
-./scripts/vm/Invoke-SandboxUI.ps1 -StageDirectory $stage -SandboxId $id -UiArguments @('inspect','-a','<현재 PID>','--depth','8','--json')
+./scripts/vm/Invoke-SandboxUI.ps1 -StageDirectory $stage -SandboxId $id -UiArguments @('inspect','-a','<현재 PID>','--depth','25','--json')
 ./scripts/vm/Invoke-SandboxUI.ps1 -StageDirectory $stage -SandboxId $id -UiArguments @('screenshot','-a','<현재 PID>','-o','C:\QAResults\editor.png','--json')
 ```
 

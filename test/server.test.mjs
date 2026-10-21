@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
+import { readFile } from 'node:fs/promises';
 import { createWorkbenchServer } from '../src/server.mjs';
 const token = 'synthetic-test-pairing-token-only';
 async function withServer(options, run) {
@@ -13,7 +14,9 @@ async function withServer(options, run) {
 const input = { operation: 'replace_text', text: '합성 문장', instruction: '보고용 문장으로 보완' };
 test('mock works without calling any upstream and returns a labelled proposal', async () => {
   await withServer({ fetch: () => { throw new Error('network forbidden'); } }, async request => {
-    assert.equal((await request('/api/health')).status, 200);
+    const health = await request('/api/health');
+    assert.equal(health.status, 200);
+    assert.equal((await health.json()).version, JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8')).version);
     const data = await (await request('/api/propose', input)).json();
     assert.equal(data.mode, 'mock'); assert.equal(data.proposedText, '[모의 수정안] 합성 문장');
   });
