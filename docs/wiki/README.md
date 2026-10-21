@@ -62,3 +62,5 @@
 
 - [질문·요약 결과 보관과 보고서](analysis-report.md)
 - [분석 기록·보고서 QA](../qa/2026-10-19-report.md)
+
+- [실제 Sandbox 게스트 준비 결과](../qa/2026-10-21-sandbox-guest.md)

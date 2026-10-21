@@ -16,6 +16,8 @@ Windows 배포물은 압축 해제 후 **Start-Workbench.cmd**로 실행한다. 
 
 [Windows VM 검증 환경](docs/wiki/windows-vm-qa.md)은 반입 패키지와 백그라운드 준비 스크립트를 추가한 상태다. 현재 PC의 Sandbox 기능 설치는 완료됐으나 재부팅 대기로 VM 첫 실행·실제 앱 QA는 미실행이다. VM 관련 검증을 포함한 현재 자동 테스트는 92개다.
 
+2026-10-21 Windows Sandbox의 공식 클라이언트 설치·실제 게스트 부팅·편집기/플러그인/Node 준비를 확인했다. 게스트 테스트는 92개 통과, 호스트 전용 1개 제외다. 실제 편집 UI 검증은 다음 단계다. [VM 준비와 재개](docs/wiki/windows-vm-qa.md).
+
 ## 목표
 
 - 기존 폐쇄망에 구축된 클라우디움과 사내 LLM을 활용한다.
