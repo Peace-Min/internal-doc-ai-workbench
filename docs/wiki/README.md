@@ -64,3 +64,6 @@
 - [분석 기록·보고서 QA](../qa/2026-10-19-report.md)
 
 - [실제 Sandbox 게스트 준비 결과](../qa/2026-10-21-sandbox-guest.md)
+
+- [실제 페이지 수정 인수 검증 절차](page-edit-acceptance.md)
+- [합성 문서·비교 도구 점검과 실행 제한](../qa/2026-10-21-page-fixture.md)

@@ -29,6 +29,8 @@ README.md → 이 문서 → docs/05-decisions.md → docs/02-development.md 순
 
 ## 다음 작업
 
+최신 편집 검증 준비 (2026-10-21): 기존 VM 실행을 확인하고 실제 편집 검증을 위한 합성 PPTX(1슬라이드/2개체/3문단/4run, 혼합 굵기·950/2026·경계 공백)와 재생성/검사 CLI를 추가했다. 구조·원본 패키지 부품 유지·덮어쓰기 거부, 비교 도구의 텍스트 변경 수락/굵기 손상 및 동일 파일 거부를 확인했다. 게스트 편집기 실행·디버깅 연결 준비 명령은 자동 승인 검토에서 blocked by policy로 실행 전 거부됐다. 같은 실행을 우회하지 않았다. actualAppLaunched/actualAppQATested는 계속 false이며 실제 읽기/적용/undo/저장/UI 검증은 미실행이다. 다음은 허용된 VM 제어 수단 또는 VM 내 수동 검증으로 docs/wiki/page-edit-acceptance.md 절차를 수행하는 것이다. fixture는 docs/qa/assets/page-edit-fixture.pptx와 VM 입력 폴더에 있다. QA: docs/qa/2026-10-21-page-fixture.md.
+
 최신 실제 게스트 준비 (2026-10-21): 사용자 재부팅을 확인한 후 공식 Store 제품 9NSMXC3NB0HN의 Sandbox 클라이언트 0.8.107.0을 설치하여 wsb.exe 부재를 해결했다. -Check ready=true 후 기존 실행기로 실제 VM 부팅·System exec·게스트 압축 해제/플러그인 설치·Node 테스트까지 완료했다. 결과: ok=true/stage=prepared, Node v24.22.0, 앱 0.12.0, editorExecutableFound/pluginInstalled true. 게스트 테스트 93개 중 92개 통과·호스트 전용 1개 제외·실패 0개. VM은 화면 연결 없이 실행 중이며 ../work/vm/windows-sandbox/host-state.json의 ID를 wsb list --raw와 대조하여 재사용한다. 중복 VM을 만들지 않는다. 종료 시 게스트 상태는 사라지고 results 보고서만 남는다. actualAppLaunched/actualAppQATested=false이며 실제 Desktop UI·페이지 편집/저장/undo·게스트 LLM은 다음 단계다. 합성 PPTX·모델은 미반입. QA: docs/qa/2026-10-21-sandbox-guest.md.
 
 최신 현재 PC 활성화 (2026-10-20): 사용자가 현재 PC VM 구축을 요청하여 관리자 승인으로 Enable-WindowsSandbox.ps1을 실행했다. 종료 코드 3010, ok=true/state=Enabled/restartNeeded=true/automaticRestart=false 확인. 반입 파일 해시와 4GB·네트워크/클립보드 차단을 재검사했다. 이후 -Check는 재부팅 필요로 ready=false다. 호스트 재부팅·VM 시작·Desktop UI 제어는 하지 않았다. 사용자 작업 저장 및 재부팅 후 저장소 기준 ../work/vm/windows-sandbox/Workbench-QA.wsb로 -Check부터 다시 실행한다. 준비 성공 후 게스트 보고서를 확인하며 첫 부팅·실제 앱 QA는 여전히 미실행이다. QA: docs/qa/2026-10-20-vm-enable.md.
