@@ -59,12 +59,11 @@ function workbenchPageCommand() {
       mapped[edit.id]=normalized;
     }
     if(!current.snapshot.allowNumberChanges){
-      var beforeNumbers=[],afterNumbers=[];
       for(var b=0;b<segments.length;b++){
-        beforeNumbers=beforeNumbers.concat(segments[b].text.match(/[+-]?\d+(?:[.,]\d+)*/g)||[]);
-        afterNumbers=afterNumbers.concat(mapped[segments[b].id].match(/[+-]?\d+(?:[.,]\d+)*/g)||[]);
+        var beforeNumbers=segments[b].text.match(/[+-]?\d+(?:[.,]\d+)*/g)||[];
+        var afterNumbers=mapped[segments[b].id].match(/[+-]?\d+(?:[.,]\d+)*/g)||[];
+        if(JSON.stringify(beforeNumbers)!==JSON.stringify(afterNumbers))return {error:'구간별 숫자가 누락·추가·변경되거나 순서가 바뀐 수정안은 적용하지 않습니다. 숫자 변경을 허용하려면 페이지를 다시 읽으세요.'};
       }
-      if(JSON.stringify(beforeNumbers.sort())!==JSON.stringify(afterNumbers.sort()))return {error:'숫자가 누락·추가·변경된 수정안은 적용하지 않습니다. 숫자 변경을 허용하려면 페이지를 다시 읽으세요.'};
     }
     var touched=[],changed=0;
     try {

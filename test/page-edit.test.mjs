@@ -92,6 +92,36 @@ test('numeric deletion or change is blocked at contract and editor unless explic
   assert.equal(f.invoke({action:'page_apply',target:allowed,plan:approved}).applied,true);
   assert.equal(f.state.entries[3].text,'예산 1000만원');
 });
+test('numeric values cannot migrate between segments or change order unless explicitly allowed',()=>{
+  for(const scenario of ['swap','move','reorder']){
+    const f=fixture();
+    f.state.entries[0].text=scenario==='reorder'?'시작 9월 10일':'승인 950';
+    f.state.entries[3].text='일정 2026';
+    const target=f.invoke({action:'page_capture'}),proposed=plan(target);
+    if(scenario==='swap'){
+      proposed.edits[0].text='승인 2026';proposed.edits[3].text='일정 950';
+    }else if(scenario==='move'){
+      proposed.edits[0].text='승인';proposed.edits[1].text+=' 950';
+    }else proposed.edits[0].text='시작 10월 9일';
+    assert.throws(()=>WorkbenchContract.validateSlidePlan(proposed,WorkbenchContract.parseSlideDocument(target.text)),/숫자/);
+    assert.ok(f.invoke({action:'page_apply',target,plan:proposed}).error);
+    assert.equal(f.state.writes,0);
+    const allowed=f.invoke({action:'page_capture',allowNumberChanges:true});
+    const approved=WorkbenchContract.validateSlidePlan(proposed,WorkbenchContract.parseSlideDocument(allowed.text));
+    assert.equal(f.invoke({action:'page_apply',target:allowed,plan:approved}).applied,true);
+  }
+});
+
+test('preserved numeric sequences accept edited prose and arbitrary response entry order',()=>{
+  const f=fixture();f.state.entries[0].text=' 시작 9월 10일, 완료 9월 10일 ';
+  const target=f.invoke({action:'page_capture'}),proposed={edits:target.segments.map(segment=>({id:segment.id,text:segment.text.trim()+' 개선'}))};
+  proposed.edits.reverse();
+  const approved=WorkbenchContract.validateSlidePlan(proposed,WorkbenchContract.parseSlideDocument(target.text));
+  assert.equal(f.invoke({action:'page_apply',target,plan:approved}).applied,true);
+  assert.equal(f.state.entries[0].text,' 시작 9월 10일, 완료 9월 10일 개선 ');
+  assert.equal(f.state.entries[3].text,'예산 950만원 개선');
+});
+
 test('both LLM protocols carry a whole slide and validate the structured plan over HTTP',async()=>{
   const document={slideNumber:2,segments:[{id:'s1',text:'원래 제목'},{id:'s2',text:'예산 950'}]},edits={edits:[{id:'s1',text:'개선 제목'},{id:'s2',text:'예산 950 유지'}]};
   for(const mode of ['openai-compatible','anthropic-compatible']){
@@ -109,6 +139,7 @@ test('both LLM protocols carry a whole slide and validate the structured plan ov
       let response=await request();assert.equal(response.status,200);assert.deepEqual((await response.json()).plan,edits);
       responsePlan={edits:[edits.edits[0],edits.edits[0]]};response=await request();assert.equal(response.status,502);
       responsePlan={edits:[edits.edits[0],{id:'s2',text:'예산 1000'}]};response=await request();assert.equal(response.status,502);assert.equal((await response.json()).code,'SLIDE_NUMBERS_CHANGED');
+      responsePlan={edits:[{id:'s1',text:'950 개선 제목'},{id:'s2',text:'예산 유지'}]};response=await request();assert.equal(response.status,502);assert.equal((await response.json()).code,'SLIDE_NUMBERS_CHANGED');
     }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
   }
 });

@@ -67,3 +67,5 @@
 
 - [실제 페이지 수정 인수 검증 절차](page-edit-acceptance.md)
 - [합성 문서·비교 도구 점검과 실행 제한](../qa/2026-10-21-page-fixture.md)
+
+- [구간별 숫자·순서 보존 QA](../qa/2026-10-21-numeric-guard.md)

@@ -57,9 +57,9 @@
     }
     const result = {edits:doc.segments.map(segment => edits.get(segment.id))};
     if (!doc.allowNumberChanges) {
-      const numbers = segments => JSON.stringify(segments.flatMap(segment => segment.text.match(/[+-]?\d+(?:[.,]\d+)*/g) || []).sort());
-      if (numbers(doc.segments) !== numbers(result.edits)) {
-        const error = new Error("숫자가 누락·추가·변경된 페이지 수정안입니다. 다시 요청하거나 숫자 변경 허용을 선택한 뒤 페이지를 다시 읽으세요.");
+      const numbers = text => JSON.stringify(text.match(/[+-]?\d+(?:[.,]\d+)*/g) || []);
+      if (doc.segments.some((segment, index) => numbers(segment.text) !== numbers(result.edits[index].text))) {
+        const error = new Error("구간별 숫자가 누락·추가·변경되거나 순서가 바뀐 페이지 수정안입니다. 다시 요청하거나 숫자 변경 허용을 선택한 뒤 페이지를 다시 읽으세요.");
         error.code = "SLIDE_NUMBERS_CHANGED"; throw error;
       }
     }
