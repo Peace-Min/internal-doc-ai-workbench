@@ -5,6 +5,8 @@
 ## 작성 상태
 
 - [Windows VM 준비·재개](windows-vm-qa.md)
+- [VM 내부 백그라운드 제어·재개](background-vm.md)
+- [백그라운드 VM 실제 실행 QA](../qa/2026-10-21-background-vm.md)
 - [VM 준비 QA와 재부팅 대기 상태](../qa/2026-10-20-vm.md)
 
 - [PPTX 페이지 단위 수정](page-editing.md)
