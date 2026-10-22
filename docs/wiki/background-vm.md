@@ -32,10 +32,10 @@ Get-Content "$stage/results/background-prepared.json"
 
 ## 게스트 편집기 실행과 조회
 
-이미 editors/DesktopEditors 프로세스나 QA 실행 작업이 있으면 새로 시작하지 않는다. `Start-BackgroundEditor.ps1`는 기존 상태를 덮어쓰지 않고 중단한다. 현재 환경은 이미 문서가 열려 있으므로 아래 시작 명령을 재실행할 필요가 없다.
+이미 editors/DesktopEditors 프로세스나 QA 실행 작업이 있으면 새로 시작하지 않는다. `Start-BackgroundEditor.ps1`는 기존 상태를 덮어쓰지 않고 중단한다. VM이 새로 만들어졌다면 이전 프로세스·설치 경로·서비스는 사라진다. 현재 목록을 확인하고 새 게스트에서만 준비/시작한다. 종료된 VM의 성공 보고서를 현재 준비 완료로 사용하지 않는다.
 
 ```powershell
-wsb.exe exec --id $id -r ExistingLogin -c 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\QAInput\Start-BackgroundEditor.ps1'
+wsb.exe exec --id $id -r ExistingLogin -c 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\QAInput\Start-BackgroundEditor.ps1 -Document C:\QAWorkbench\synthetic.pptx'
 ./scripts/vm/Invoke-SandboxUI.ps1 -StageDirectory $stage -SandboxId $id -UiArguments @('list-windows','-a','editors','--json')
 ```
 
@@ -51,3 +51,9 @@ wsb.exe exec --id $id -r ExistingLogin -c 'powershell.exe -NoProfile -ExecutionP
 래퍼는 요청별 JSON과 stdout/stderr/result를 stage에 보관한다. CLI 오류/로그인 부재는 실패로 보고하며 호스트 입력으로 우회하지 않는다. 인수·캡처에는 합성 데이터만 사용하고 연결 토큰을 넣지 않는다. UIA `set-value`/`invoke`를 우선 사용하며 클릭 등 실제 입력은 게스트의 대상/최신 화면을 확인한 뒤 별도로 검증한다.
 
 공식 근거: [UI Automation](https://learn.microsoft.com/en-us/windows/apps/dev-tools/winapp-cli/ui-automation), [Sandbox 실행](https://github.com/microsoft/winappCli/blob/v0.7.1/docs/sandbox-execution.md), [VC++ 런타임](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist). 최신 문서의 기능을 추정하지 않고 설치한 0.7.1의 `--help`와 실제 결과를 기준으로 삼았다.
+
+## 새 VM의 상태 보고와 로그인
+
+준비 보고서는 UTC startedAt와 stage=preparing/prepared/failed를 기록한다. 시작 시 과거 ok=true를 즉시 지우며 해시/서명/설치 실패는 ok=false로 남긴다. 실행 종료 코드와 새 startedAt를 함께 확인하고 과거 보고서만으로 현재 성공을 판정하지 않는다.
+
+새 VM에서 System 준비가 성공해도 ExistingLogin이 가능하다는 뜻은 아니다. 0x80070520은 게스트 로그온 세션이 없다는 뜻이며 실제 편집기 시작 성공으로 기록하지 않는다. 허용된 게스트 로그인 환경이 준비된 뒤 재조회한다. 호스트 화면 연결이나 자격증명/잠금 우회를 자동 대안으로 사용하지 않는다.

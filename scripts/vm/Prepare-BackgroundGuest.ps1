@@ -2,6 +2,11 @@ $ErrorActionPreference='Stop'
 $isSystem=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value -eq 'S-1-5-18'
 if ((Get-Content C:\QAInput\guest-only.marker -Raw).Trim() -ne 'INTERNAL_DOC_AI_SANDBOX_INPUT_V1' -or
     (-not $isSystem -and $env:USERNAME -ne 'WDAGUtilityAccount')) {throw 'Run only inside the configured Sandbox.'}
+$reportPath='C:\QAResults\background-prepared.json'
+$report=@{ok=$false;stage='preparing';scope='guest-only';startedAt=[DateTime]::UtcNow.ToString('o');winappVersion='0.7.1'}
+# A failed fresh VM preparation must not inherit an earlier VM's successful report.
+$report | ConvertTo-Json | Set-Content $reportPath -Encoding UTF8
+try {
 $inputs=@{
   'winappcli-x64-0.7.1.zip'='d925d1e32cdc320b6d271f653fd2cd3c05b5d7558deb20d1b548bead77900fcf'
   'vc_redist.x64.exe'='843068991daaa1f73ad9f6239bce4d0f6a07a51f18c37ea2a867e9beca71295c'
@@ -29,6 +34,12 @@ if (-not $vc -or $vc.Installed -ne 1 -or [version]($vc.Version.TrimStart('v')) -
   $code=$process.ExitCode
 }
 $ready=$code -in 0,3010 -and (Test-Path C:\Windows\System32\MSVCP140.dll)
-@{ok=$ready;runtimeExitCode=$code;restartRequired=($code -eq 3010);scope='guest-only';winappVersion='0.7.1'} |
-  ConvertTo-Json | Set-Content C:\QAResults\background-prepared.json -Encoding UTF8
+$report.ok=$ready;$report.stage=if($ready){'prepared'}else{'failed'}
+$report.runtimeExitCode=$code;$report.restartRequired=($code -eq 3010)
+$report | ConvertTo-Json | Set-Content $reportPath -Encoding UTF8
 if (-not $ready) {exit 1}
+} catch {
+  $report.ok=$false;$report.stage='failed';$report.errorType=$_.Exception.GetType().FullName
+  $report | ConvertTo-Json | Set-Content $reportPath -Encoding UTF8
+  throw
+}

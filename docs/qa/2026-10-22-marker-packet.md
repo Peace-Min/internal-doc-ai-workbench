@@ -23,3 +23,11 @@ PDF SDK는 모의 객체이고 AI는 mock이다. 실제 Desktop PDF 패널 및 �
 ## 한계와 다음 인수
 
 앱 내 자동 Marker 실행·현재 열린 PDF 자동 일치 확인·원본 위치/영역 대조·PDF 수정/저장·실제 Desktop 파일 입력/질의는 미완료다. 기존 VM 입력 및 LLM 실행 제한을 우회하지 않았다. 클라우디움·사내 LLM 인수도 미실행이다. 전체 완료는 docs/06-completion.md 기준으로 계속 판정한다.
+
+## 새 VM 제어 준비 보완
+
+고정 WinApp 0.7.1과 VC++ 14.51.36247.0 설치를 게스트에 복원했다. 서명/해시 확인, VC 설치 코드 0 및 재시작 불필요를 확인했다. Prepare-BackgroundGuest.ps1이 과거 성공 JSON을 남기는 문제를 수정했다. 시작 즉시 ok=false/stage=preparing과 UTC startedAt를 기록하며 예외 시 실패/예외 형식만 남긴다. 고의 해시 불일치의 VM 시험으로 stale-success → failed/ok=false 전환과 코드 1을 확인했고, 원본 스크립트의 정상 재준비는 prepared/ok=true·코드 0이었다.
+
+입력 공유 폴더에 추가한 시험 파일이 게스트에 즉시 보이지 않아 처음 두 실행은 파일 부재로 실패했다. 지정된 결과 공유 폴더에 시험 스크립트를 복사한 뒤 검증했다. 실패 주입은 별도 결과 파일에만 기록했고 실행 바이너리/입력 해시는 변경하지 않았다.
+
+이후 ExistingLogin의 실제 편집기 시작은 0x80070520, 지정한 로그온 세션 없음으로 실행되지 않았다. System 준비 성공은 사용자 로그인/실제 UI 준비 완료를 뜻하지 않는다. 새로운 로그인이나 호스트 화면 연결로 우회하지 않았고 actualAppLaunched/actualAppQATested=false를 유지한다. 기존 VM의 no_interactive_desktop 입력 실패와도 구분한다.
