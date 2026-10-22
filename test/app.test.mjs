@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
+import { webcrypto } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { createWorkbenchServer } from '../src/server.mjs';
 
@@ -8,6 +9,8 @@ const app = await readFile(new URL('../plugin/app.js', import.meta.url), 'utf8')
 const contract = await readFile(new URL('../plugin/contract.js', import.meta.url), 'utf8');
 const report = await readFile(new URL('../plugin/report.js', import.meta.url), 'utf8');
 const pdf = await readFile(new URL('../plugin/pdf-selection.js', import.meta.url), 'utf8');
+const analysis = await readFile(new URL('../plugin/analysis-context.js', import.meta.url), 'utf8');
+const analysisFiles = await readFile(new URL('../plugin/analysis-files.js', import.meta.url), 'utf8');
 const html = await readFile(new URL('../plugin/index.html', import.meta.url), 'utf8');
 const token = 'synthetic-port-test-pairing-code';
 
@@ -20,7 +23,7 @@ function panel(url, fetchImpl, documentError = false, options = {}) {
   elements.get('instruction').value = '합성 문장 보완';
   const calls = [], commands = [], payloads = [], methods = [];
   const context = vm.createContext({
-    location: new URL(url), URLSearchParams, AbortController, AbortSignal, setTimeout, clearTimeout,
+    location: new URL(url), URLSearchParams, AbortController, AbortSignal, setTimeout, clearTimeout, crypto: webcrypto, Uint8Array, TextDecoder,
     document: { getElementById: id => elements.get(id) },
     fetch: async (url, options) => { calls.push(String(url)); return fetchImpl(url, options); },
     Asc: { scope: {}, plugin: {
@@ -51,15 +54,57 @@ function panel(url, fetchImpl, documentError = false, options = {}) {
   vm.runInContext(contract, context);
   vm.runInContext(report, context);
   vm.runInContext(pdf, context);
+  vm.runInContext(analysis, context);
+  vm.runInContext(analysisFiles, context);
   vm.runInContext(app, context);
   context.Asc.plugin.init();
   return { get: id => elements.get(id), calls, commands, payloads, methods };
 }
 
+test('PDF packet pages reach only the authenticated text endpoint and invalidate on file or range changes', async () => {
+  const root=new URL('../docs/qa/assets/marker-benchmark/',import.meta.url);
+  const pdfFile=new File([await readFile(new URL('fixture.pdf',root))],'fixture.pdf');
+  const packetFile=new File([await readFile(new URL('marker-ocr.json',root))],'analysis.json');
+  await withServer(async port=>{
+    const sent=[];
+    const ui=panel('file:///synthetic/index.html',async(url,options)=>{if(options?.body)sent.push(JSON.parse(options.body));return fetch(url,options)},false,{editorType:'pdf'});
+    ui.get('port').value=port;await ui.get('connect').onclick();
+    ui.get('scope').value='pdf_packet';ui.get('scope').onchange();
+    assert.equal(ui.get('packet-settings').hidden,false);
+    ui.get('packet-pdf').files=[pdfFile];ui.get('packet-json').files=[packetFile];
+    ui.get('packet-start').value='3';ui.get('packet-end').value='3';
+    await ui.get('capture').onclick();
+    assert.match(ui.get('source').textContent,/437/);assert.doesNotMatch(ui.get('source').textContent,/\[page 1\]/);
+    ui.get('instruction').value='RAVEN의 수치를 알려 주세요.';
+    await ui.get('request').onsubmit({preventDefault(){}});
+    assert.equal(sent.length,1,ui.get('status').textContent);assert.deepEqual(Object.keys(sent[0]).sort(),['instruction','operation','text']);
+    assert.equal(sent[0].text,ui.get('source').textContent);
+    assert.match(ui.get('report').value,/첨부 PDF SHA-256: baa6cd/);
+    assert.match(ui.get('report').value,/\[page 3\]/);
+    assert.equal(ui.get('report').value.includes(ui.get('source').textContent),false);
+    for(const id of ['packet-pdf','packet-json','packet-start','packet-end']) {
+      ui.get(id).onchange();assert.equal(ui.get('send').disabled,true);
+      await ui.get('request').onsubmit({preventDefault(){}});assert.equal(sent.length,1);
+      await ui.get('capture').onclick();assert.equal(ui.get('send').disabled,false);
+    }
+    ui.get('packet-pdf').files=[new File(['%PDF-other'],'wrong.pdf')];
+    await ui.get('capture').onclick();assert.equal(ui.get('send').disabled,true);
+    assert.deepEqual(ui.methods,[]);assert.deepEqual(ui.commands,[]);
+    assert.equal(ui.calls.length,2);
+  });
+});
+
+test('PDF packet citation review separates known and unknown pages',()=>{
+  const context=vm.createContext({});vm.runInContext(report,context);
+  const record={kind:'pdf_packet',sources:['[page 3]'],answer:'437 [page 3] [page 99] [page 3]'};
+  const checked=context.WorkbenchReport.review(record);
+  assert.deepEqual(Array.from(checked.known),['[page 3]']);assert.deepEqual(Array.from(checked.unknown),['[page 99]']);
+});
+
 test('PDF selected-text questions use the existing authenticated bridge without edit commands', async () => {
   await withServer(async port => {
     const ui=panel('file:///synthetic/index.html',fetch,false,{editorType:'pdf'});
-    assert.equal(ui.get('operation').value,'ask');assert.equal(ui.get('scope').disabled,true);
+    assert.equal(ui.get('operation').value,'ask');assert.equal(ui.get('scope').disabled,false);
     assert.equal(ui.get('pdf-note').hidden,false);
     ui.get('port').value=port;await ui.get('connect').onclick();
     await ui.get('capture').onclick();

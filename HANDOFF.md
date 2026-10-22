@@ -29,6 +29,13 @@ README.md → 이 문서 → docs/05-decisions.md → docs/02-development.md 순
 
 ## 다음 작업
 
+최신 0.15.0 (2026-10-22): 기존 Marker/pdfplumber 분석 패킷을 PDF 패널로 가져오는 읽기 전용 흐름을 구현했다. 원본 PDF 20MiB/JSON 2MiB·SHA-256 연결 검증, 페이지 범위/누락/중복/12,000자 검사, 선택 페이지 질의·출처 대조·해시 포함 보고서를 제공한다. CLI와 패널은 같은 범위 검증 함수를 사용한다. 호스트/동봉 PATH 없는 배포본 각각 107개, 새 차단 VM 106개 통과/호스트 전용 1개 제외. 실제 헤드리스 Chrome에서 파일 선택→3페이지→질의→대조→보고서, 범위 변경과 해시 불일치 차단을 확인했다. 모의 SDK/mock AI이며 실제 Desktop 패널 인수는 아니다. QA docs/qa/2026-10-22-marker-packet.md, Wiki docs/wiki/pdf-analysis-files.md.
+
+현재 VM 상태 갱신: 이전 96ec73e8-9e9f-41be-8fe5-efb412218ebb VM은 종료됐다. 새 VM ID 7715a4b4-dc2a-4bca-98ae-5706c5ee15a9를 화면 연결 없이 준비했고 host-state.json과 실제 wsb list를 대조해 재사용한다. 현재 소스/Node는 C:\QAWorkbench 및 C:\QAWorkbench\runtime\node.exe, 편집기는 C:\QAEditors\DesktopEditors.exe, 플러그인은 0.15.0이다. 실제 앱/서비스는 시작하지 않았다. 이전 C:\QA Installed Final 0130·C:\QACandidate0140·PDF 창/PID·4318 서비스·VC++/WinApp 설치는 이전 VM 이력이며 현재 존재한다고 가정하지 않는다. 다음 실제 UI 작업은 검증된 Prepare-BackgroundGuest.ps1로 게스트 VC++/WinApp을 준비한 뒤 허용된 UIA 수단에서 진행한다. 이전 입력/LLM 실행 제한을 우회하지 않는다.
+
+남은 작업: 실제 PDF 패널 파일 선택/질의와 PPTX 페이지 편집/undo/저장 인수, 앱 내 자동 Marker 실행·페이지 위치 대조·PDF 편집, 클라우디움/사내 LLM 연결이다. 해시는 첨부 파일의 연결만 확인하며 현재 열린 PDF 일치/추출 정확성을 보장하지 않는다. 전체 목표는 미완료이며 docs/06-completion.md를 유지한다.
+
+
 최신 0.14.0 PDF 선택 분석 후보 (2026-10-21): PDF 전용 플러그인 변형과 GetSelectedText만 사용하는 읽기 전용 질문/요약을 구현했다. 12,000자/15초·빈/비문자열/NUL/실패 거부, PDF 쓰기/문서 범위 요청 차단, 기존 기록·원문 대조·PDF 보고서 표시를 검증했다. 호스트/동봉 PATH 없는 배포본 각각 101개, VM 후보 C:\QACandidate0140에서 100개 통과/호스트 전용 1개 제외. 헤드리스 Chrome 모의 PDF SDK에서 두 답변·보고서 다운로드·원문/토큰 미추가·HTML 일반 텍스트·초과 전송 차단 통과. SDK 실제 선택 API와 PDF 패널 인수는 미완료라 UI/설명에 실험적으로 표시한다.
 
 같은 차단 VM의 실제 설치 편집기로 기존 Marker 합성 PDF 사본 C:\QA PDF 0140.pdf를 열고 첫 화면 렌더링과 1/3 페이지 표시를 확인했다. 현재 PDF 편집기가 열려 있으니 실제 프로세스/창을 재조회하고 중복 시작하지 않는다. 플러그인 파일은 0.14.0이고 이전 0.13.0은 C:\QAPluginBackups\pdf-0140에 보관했다. 설치 편집기/Node는 C:\QA Installed Final 0130의 검증된 런타임을 사용했고 C:\QACandidate0140에는 소스만 있다. 기존 4318 mock은 여전히 0.12.1이며 새 0.14.0 지속 서비스를 시작하지 않았다. 다음은 PDF 패널 실제 인수 및 Marker/페이지 분석 UI·PDF 편집 작업이며 사내 API 전제는 docs/06-completion.md를 따른다. 이전 입력/VM LLM 명령 제한은 재시도·우회하지 않았다. QA docs/qa/2026-10-21-pdf-selection.md, Wiki pdf-selection.md.

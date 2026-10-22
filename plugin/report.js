@@ -3,7 +3,7 @@
   const MAX_RECORDS = 20;
   function review(record) {
     const labels = new Set(record.sources);
-    const cited = [...new Set([...record.answer.matchAll(/\[슬라이드\s+([1-9][0-9]*)\s*·\s*개체\s+([1-9][0-9]*)\]/g)].map(match => `[슬라이드 ${match[1]} · 개체 ${match[2]}]`))];
+    const cited = record.kind === "pdf_packet" ? [...new Set([...record.answer.matchAll(/\[page\s+([1-9][0-9]*)\]/g)].map(match=>`[page ${match[1]}]`))] : [...new Set([...record.answer.matchAll(/\[슬라이드\s+([1-9][0-9]*)\s*·\s*개체\s+([1-9][0-9]*)\]/g)].map(match => `[슬라이드 ${match[1]} · 개체 ${match[2]}]`))];
     const known = cited.filter(label => labels.has(label));
     const unknown = cited.filter(label => !labels.has(label));
     const summary = record.kind === "pdf_selection" ? "PDF 선택 텍스트 답변 · 페이지 번호·인용 정확성 자동 대조 대상 아님" : labels.size === 0 ? "선택 개체 답변 · 슬라이드 출처 자동 대조 대상 아님" : cited.length === 0 ? "정형 출처 표기 없음 · 원문과 직접 대조 필요" : `출처 표기 ${cited.length}개 · 읽은 출처에 있음 ${known.length}개 · 읽은 출처에 없음 ${unknown.length}개`;
@@ -23,6 +23,7 @@
         `읽은 대상: ${record.target}`,
         `읽은 시각 (UTC): ${record.capturedAt}`,
         `범위 안내: ${record.coverage}`,
+        ...(record.documentSha256 ? [`첨부 PDF SHA-256: ${record.documentSha256}`] : []),
         `출처: ${record.kind === "pdf_selection" ? "PDF 선택 텍스트, 전체 문서·페이지 범위 미확인" : record.sources.length ? record.sources.join(" · ") : "선택 개체, 문서 전체 아님"}`,
         `출처 대조: ${review(record).summary}`,
         `미확인 출처: ${review(record).unknown.join(" · ") || "없음 (내용의 사실성·인용 정확성 보장 아님)"}`,

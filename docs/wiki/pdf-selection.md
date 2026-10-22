@@ -14,6 +14,6 @@ PDF 편집기에서 텍스트를 직접 선택한 뒤 Internal AI Workbench의 P
 
 ## 다음 실제 인수
 
-사용 가능한 VM UI에서 PDF 텍스트 선택과 플러그인 패널 실행, 선택 텍스트와 API 응답 일치, 연결/질의/요약/보고서, 편집 명령 미호출을 확인한다. 숫자·혼합 언어·긴 선택·스캔 페이지도 분리 시험한다. 스캔/OCR·Marker 통합, PDF 본문/주석/페이지 편집은 별도 미완료 작업이다.
+사용 가능한 VM UI에서 PDF 텍스트 선택과 플러그인 패널 실행, 선택 텍스트와 API 응답 일치, 연결/질의/요약/보고서, 편집 명령 미호출을 확인한다. 숫자·혼합 언어·긴 선택·스캔 페이지도 분리 시험한다. 0.15.0의 [분석 파일 가져오기](pdf-analysis-files.md)는 기존 Marker/OCR 결과를 연결한다. 자동 추출 실행, 실제 패널 인수, PDF 본문/주석/페이지 편집은 별도 미완료 작업이다.
 
 근거: [PDF GetSelectedText](https://api.onlyoffice.com/docs/plugins/interacting-with-editors/pdf-api/Methods/GetSelectedText/), [PDF 플러그인 설정](https://api.onlyoffice.com/docs/plugins/configuration/), [고정 SDK API 구현](https://github.com/ONLYOFFICE/sdkjs/blob/72b0421c0bbf9d01eed9cf14834ae47eb2df1b50/common/apiBase_plugins.js), [QA 결과](../qa/2026-10-21-pdf-selection.md).

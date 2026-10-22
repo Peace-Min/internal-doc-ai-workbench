@@ -45,14 +45,16 @@
     $("port").disabled = busy;
     $("token").disabled = busy;
     $("operation").disabled = busy;
-    $("scope").disabled = pdfMode || busy || ["replace_text","rewrite_slide"].includes($("operation").value);
+    $("scope").disabled = busy || ["replace_text","rewrite_slide"].includes($("operation").value);
+    $("packet-settings").hidden = !pdfMode || $("scope").value !== "pdf_packet";
+    for (const id of ["packet-pdf","packet-json","packet-start","packet-end"]) $(id).disabled = busy;
     $("page-edit-settings").hidden = $("operation").value !== "rewrite_slide";
     $("page-number").disabled = busy;
     $("page-allow-numbers").disabled = busy;
     $("page-apply").disabled = pdfMode || busy || !target || !pagePlan || $("operation").value !== "rewrite_slide" || !pagePlan.edits.some((edit,index)=>edit.text!==target.segments[index].text);
     $("slide-range").hidden = $("scope").value !== "document";
     $("slide-start").disabled = busy; $("slide-end").disabled = busy;
-    $("capture").textContent = pdfMode ? "PDF 선택 텍스트 읽기" : $("operation").value === "rewrite_slide" ? "페이지 읽기" : $("scope").value === "document" ? "문서 텍스트 읽기" : "선택 개체 읽기";
+    $("capture").textContent = pdfMode ? ($("scope").value === "pdf_packet" ? "첨부 분석 페이지 읽기" : "PDF 선택 텍스트 읽기") : $("operation").value === "rewrite_slide" ? "페이지 읽기" : $("scope").value === "document" ? "문서 텍스트 읽기" : "선택 개체 읽기";
     $("apply").disabled = pdfMode || busy || !target || $("operation").value !== "replace_text" || $("scope").value !== "selected" || proposalOperation !== "replace_text" || !$("proposal").value.trim();
     $("cancel").hidden = !busy || !controller;
   }
@@ -139,8 +141,9 @@
     window.Asc.plugin.init = function () {
       pdfMode = window.Asc.plugin.info.editorType === "pdf";
       ready = pdfMode || window.Asc.plugin.info.editorType === "slide";
-      $("mode").textContent = pdfMode ? "PDF · 선택 텍스트 질문·요약 (실험적)" : ready ? "PPTX · 텍스트 보완과 질의·요약" : "PPTX 또는 PDF 편집기에서 열어 주세요.";
+      $("mode").textContent = pdfMode ? "PDF · 선택/분석 파일 질문·요약 (실험적)" : ready ? "PPTX · 텍스트 보완과 질의·요약" : "PPTX 또는 PDF 편집기에서 열어 주세요.";
       for (const option of $("operation").options || []) option.disabled = pdfMode && !["ask","summarize"].includes(option.value);
+      for (const option of $("scope").options || []) option.disabled = option.value === "slide_edit" || (option.value === "document" && pdfMode) || (option.value === "pdf_packet" && !pdfMode);
       $("pdf-note").hidden = !pdfMode;
       $("pptx-operation-hint").hidden = pdfMode; $("pptx-scope-hint").hidden = pdfMode;
       if (pdfMode) {
@@ -171,7 +174,8 @@
     $("source").textContent = "작업을 바꿨습니다. 개체를 다시 읽어 주세요.";
     $("target").textContent = "텍스트 상자 한 개를 선택하세요.";
     const operation = $("operation").value;
-    if (pdfMode || operation === "replace_text") $("scope").value = "selected";
+    if (pdfMode) { if (!["selected","pdf_packet"].includes($("scope").value)) $("scope").value = "selected"; }
+    else if (operation === "replace_text") $("scope").value = "selected";
     else if (operation === "rewrite_slide") $("scope").value = "slide_edit";
     else if ($("scope").value === "slide_edit") $("scope").value = "selected";
     $("instruction-label").textContent = operation === "ask" ? "읽은 내용에 대해 무엇이 궁금한가요?" : operation === "summarize" ? "요약 방향 (비워 두면 핵심 요약)" : "어떻게 다듬을까요?";
@@ -192,17 +196,26 @@
   $("slide-end").oninput = $("scope").onchange;
   $("page-number").oninput = $("scope").onchange;
   $("page-allow-numbers").onchange = $("scope").onchange;
+  for (const id of ["packet-pdf","packet-json","packet-start","packet-end"]) $(id).onchange = $("scope").onchange;
+  $("packet-start").oninput = $("packet-end").oninput = $("scope").onchange;
   $("capture").onclick = async () => {
     if (busy) return;
     busy = true; target = null; clearResult(); $("coverage").textContent = ""; controls();
     try {
       const operation = $("operation").value;
-      if (pdfMode && (!readOnlyOperation() || $("scope").value !== "selected")) throw new Error("PDF는 선택 텍스트의 질문·요약만 지원합니다. 작업과 범위를 다시 확인하세요.");
+      if (pdfMode && (!readOnlyOperation() || !["selected","pdf_packet"].includes($("scope").value))) throw new Error("PDF는 선택 텍스트 또는 첨부 분석의 질문·요약만 지원합니다. 작업과 범위를 다시 확인하세요.");
+      if (!pdfMode && $("scope").value === "pdf_packet") throw new Error("첨부 PDF 분석은 PDF 패널에서 사용하세요.");
       const range = $("scope").value === "document" ? WorkbenchContract.validateSlideRange($("slide-start").value, $("slide-end").value) : {};
-      const snapshot = pdfMode ? await WorkbenchPdfSelection.capture(window.Asc.plugin) : operation === "rewrite_slide" ? await capturePage(WorkbenchContract.validateSlideRange($("page-number").value, "").startSlide) : await capture(operation !== "replace_text", $("scope").value, range);
+      const snapshot = pdfMode ? ($("scope").value === "pdf_packet" ? await WorkbenchAnalysisFiles.capture($("packet-pdf").files?.[0],$("packet-json").files?.[0],{startPage:$("packet-start").value,endPage:$("packet-end").value}) : await WorkbenchPdfSelection.capture(window.Asc.plugin)) : operation === "rewrite_slide" ? await capturePage(WorkbenchContract.validateSlideRange($("page-number").value, "").startSlide) : await capture(operation !== "replace_text", $("scope").value, range);
       WorkbenchContract.validateRequest({ operation, text: snapshot.text, instruction: "capture" });
       target = Object.freeze(snapshot);
       capturedAt = new Date().toISOString();
+      if (snapshot.kind === "pdf_packet") {
+        $("target").textContent = `첨부 PDF 분석 · ${snapshot.startPage}~${snapshot.endPage}쪽 · ${snapshot.engineLabel}`;
+        $("coverage").textContent = `첨부 PDF와 패킷의 해시 일치 확인 · 현재 열린 문서와 일치 여부는 자동 확인하지 않습니다. 추출 정확성은 원본과 대조하세요. 빈 페이지: ${snapshot.emptyPages.join(", ") || "없음"}. 페이지 출처를 포함해 최대 12,000자입니다.`;
+        $("source").textContent = snapshot.text;
+        status("첨부한 분석 페이지를 원본과 대조한 뒤 질문·요약을 요청하세요. 파일을 바꾸면 다시 읽어 주세요."); return;
+      }
       if (pdfMode) {
         $("target").textContent = "PDF · 읽은 시점의 선택 텍스트";
         $("coverage").textContent = "직접 선택한 텍스트만 최대 12,000자까지 읽었습니다. 전체 PDF·페이지 범위·이미지·OCR은 포함하지 않습니다. 원문은 변경하지 않습니다.";
@@ -226,7 +239,7 @@
   $("request").onsubmit = async (event) => {
     event.preventDefault();
     if (busy || !target || !connected) return;
-    if (pdfMode && (!readOnlyOperation() || target.kind !== "pdf_selection" || $("scope").value !== "selected")) { status("PDF는 읽기 전용 질문·요약만 지원합니다. 다시 읽어 주세요.", true); return; }
+    if (pdfMode && (!readOnlyOperation() || !((target.kind === "pdf_selection" && $("scope").value === "selected") || (target.kind === "pdf_packet" && $("scope").value === "pdf_packet")))) { status("PDF는 읽기 전용 질문·요약만 지원합니다. 다시 읽어 주세요.", true); return; }
     if (["ask","summarize"].includes($("operation").value) && history.length >= WorkbenchReport.MAX_RECORDS) {
       status("기록이 20건입니다. 보고서를 내려받고 기록을 지운 뒤 계속하세요.", true); return;
     }
@@ -238,7 +251,7 @@
     try {
       const instruction = operation === "summarize" && !$("instruction").value.trim() ? "핵심 사실과 조건을 간결하게 요약해 주세요." : $("instruction").value;
       const body = WorkbenchContract.validateRequest({ operation, text: target.text, instruction });
-      const provenance = { kind: target.kind, capturedAt, target: $("target").textContent, coverage: $("coverage").textContent, sources: (target.sources || []).map(source => source.label), sourceText: target.text };
+      const provenance = { kind: target.kind, documentSha256: target.documentSha256, capturedAt, target: $("target").textContent, coverage: $("coverage").textContent, sources: (target.sources || []).map(source => source.label), sourceText: target.text };
       const result = await api("/api/propose", body);
       if (result.operation !== operation) throw new Error("응답 작업이 요청과 다릅니다. 다시 요청해 주세요.");
       if (operation === "rewrite_slide") {
